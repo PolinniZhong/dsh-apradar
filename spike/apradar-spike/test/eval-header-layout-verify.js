@@ -81,16 +81,25 @@
     seen.add(key)
     rows.push({ el, tag: desc(el), text: t.slice(0, 48), rect: rectOf(el) })
   }
-  rows.sort((a, b) => a.rect[1] - b.rect[1])
-  out.candidates = rows.slice(0, 12).map((r) => ({ tag: r.tag, text: r.text, rect: r.rect }))
+  // ⚠️ 必须挑**未选中**的会话行：点一个已经 `*_selected` 的行不会发生导航
+  //    （实测点「新会话」这个已选中行，7 秒后 `homeHero` 仍是 True、什么都没变）。
+  //    另外实测只有「直接把 .click() 打在行元素本身」有效；行内没有 button/a/[role=button]，
+  //    完整指针事件序列也能用但没必要。
+  rows.sort((a, b) => {
+    const sa = /selected/.test(String(a.el.className)) ? 1 : 0
+    const sb = /selected/.test(String(b.el.className)) ? 1 : 0
+    return sa - sb || a.rect[1] - b.rect[1]
+  })
+  out.candidates = rows.slice(0, 12).map((r) => ({ tag: r.tag, text: r.text, rect: r.rect, selected: /selected/.test(String(r.el.className)) }))
   out.sessionRowCount = rows.length
 
   const target = rows[0]
   if (!target) { out.reason = '左栏没有找到任何会话条目 —— 无法进行，判定 inconclusive'; return out }
   out.clickedCandidate = { tag: target.tag, text: target.text, rect: target.rect }
 
-  ;(target.el.closest('button,[role="button"],li,a') || target.el).click()
-  await sleep(6000)
+  // 直接把 click 打在行元素本身（实测这是有效的那个；行内没有 button/a/[role=button]）
+  target.el.click()
+  await sleep(6500)
 
   // ── ② 正证据：输入框必须出现 ─────────────────────────────────
   const box = composer()
