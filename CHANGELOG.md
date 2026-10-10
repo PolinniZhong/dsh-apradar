@@ -11,9 +11,17 @@ GitHub Release 的正文取自本文件的对应小节，**不另写一份** —
 界面上不会出现模拟数据、假刷新、假的「已保存」。
 
 > **发布记录**：GitHub tag `v0.1.0` → 提交 `5c505a3`（轻量 tag），2026-10-10 建 Release，正文即本节。
-> 本轮**未发布 npm** —— `dsh-apradar` 在 npm registry 上仍不存在。
-> 将来真要发 npm 时，本节还要补 `dist.shasum` 与 `dist.fileCount`（这两个才是能跨端比对的硬判据，
-> 本地 `npm pack` 报的字节数历来对不上，差的是 tar/gzip 框架元数据）。
+> npm：`dsh-apradar@0.1.0` 于 2026-10-10 **首次发布** —— `dist.shasum = 05a64d6b10d7de34396cef2924e63026c64eaba9`、
+> `dist.fileCount = 34`、`dist.unpackedSize = 485448`、`dist-tags.latest = 0.1.0`。
+> ⚠️ **本版在 registry 上的 `gitHead` 是缺失的**（不是写错提交，是根本没有这个字段），
+> 所以 npm 包页面上没有"构建自哪个提交"的链接。
+> 根因已定位并复核：发布是在 `git worktree add --detach` 造出的**链接工作树**里跑的，
+> 而 npm 取 HEAD 的方式是直接读 `<gitRoot>/.git/HEAD`（`@npmcli/package-json/lib/normalize.js:499`）；
+> 链接工作树的 `.git` 是一个**文件**（内容是 `gitdir: …`），读取抛 `ENOTDIR` 后被那里的空 `catch` 静默吞掉，
+> 于是 `gitHead` 不写入。**0.1.0 无法补救** —— npm 规定同一个 `name@version` 一旦撤销即**永久不可重用**，
+> 所以不能"撤了重发"。**下一个版本起改为真实 clone 到 tag 提交再发布**（`.git` 是目录，`gitHead` 才会等于 tag 指向的提交）。
+> 另外，首次发布会由 registry 自动生成一个 `0.0.0-stage` 占位版本（`stub: true`，
+> 描述为 "Temporary package placeholder for staged publishing"）—— 它不是本仓库发布的内容，也不占 `dist-tags`。
 
 ### 新增
 
