@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>示例产品博客</title>
+    <link>https://example.com/blog</link>
+    <description>一个经典的 RSS 2.0 提要</description>
+    <language>zh-cn</language>
+    <lastBuildDate>Tue, 03 Jun 2008 11:05:30 GMT</lastBuildDate>
+    <item>
+      <title>全面开放 API 的按量计费</title>
+      <link>https://example.com/blog/api-pricing</link>
+      <guid isPermaLink="false">example-blog-post-1001</guid>
+      <pubDate>Tue, 03 Jun 2008 11:05:30 GMT</pubDate>
+      <description><![CDATA[<p>从今天起，API 调用按量计费，<strong>无需预付费</strong>。</p>
+<p>价格与配额详见文档。</p>]]></description>
+      <dc:creator>产品团队</dc:creator>
+    </item>
+    <item>
+      <title>发布 v2 控制台</title>
+      <link>https://example.com/blog/console-v2</link>
+      <guid isPermaLink="false">example-blog-post-1002</guid>
+      <pubDate>Mon, 02 Jun 2008 08:15:00 +0200</pubDate>
+      <description>简化版摘要：控制台全面改版。</description>
+      <content:encoded><![CDATA[<p>新版控制台重构了导航，并把「关注源」放到了首页。</p>
+<p>旧版入口会在 90 天后下线。</p>]]></content:encoded>
+    </item>
+  </channel>
+</rss>

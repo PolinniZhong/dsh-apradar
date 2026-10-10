@@ -1,0 +1,11 @@
+# dsh-apradar-spike bundle patch
+#
+# 用途：AI 产品雷达 P0-00 技术验证 Spike（V1 / V6）。
+# 这不是产品代码，也不是 Demo：它只回答四个问题 ——
+#   ① 右栏页签能否注册  ② Client→Host 同源请求能否到达
+#   ③ Host 正常响应能否解析  ④ 异常态（错误码 / 非 JSON / 超时）能否区分且不崩溃
+#
+# 卸载：从 profile 的 package.json 依赖里移除本包即可（见 spike/apradar-spike/README.md）。
+- insert:
+    - id: dsh-apradar-spike
+      name: 'dsh-apradar-spike'

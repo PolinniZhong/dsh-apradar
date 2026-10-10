@@ -1,0 +1,28 @@
+{
+  "name": "dsh-apradar-spike",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI 产品雷达 · P0-00 技术验证 Spike（不是产品代码，不是 Demo）",
+  "main": "./src/host/index.js",
+  "exports": {
+    ".": "./src/host/index.js",
+    "./client": "./src/client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=22.19"
+  }
+}

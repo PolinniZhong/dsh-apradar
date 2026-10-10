@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# 依赖（本插件零运行时依赖，理论上不会出现；出现了也不要提交）
+node_modules/
+.pnpm-store/
+
+# 日志与本地环境
+*.log
+npm-debug.log*
+.env
+.env.*
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+*.swp
+
+# 一次性产物
+/tmp/
+*.tgz

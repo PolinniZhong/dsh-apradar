@@ -1,0 +1,51 @@
+{
+  "name": "dsh-apradar",
+  "version": "0.1.0",
+  "description": "AI 产品雷达（AI Product Radar）—— 面向 AI 产品经理与 Agent Harness 用户的 DSH 插件：关注公开来源、识别前后变化、查看原始证据、沉淀产品机会。",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "ai-product-radar",
+    "product-management",
+    "changelog",
+    "rss"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "external": [],
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=22.19",
+    "dsh": ">=0.2.0-rc.1"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build.mjs --check",
+    "test": "node --test 'test/*.test.mjs'",
+    "prepack": "node scripts/build.mjs"
+  },
+  "license": "MIT",
+  "author": "PolinniZhong"
+}

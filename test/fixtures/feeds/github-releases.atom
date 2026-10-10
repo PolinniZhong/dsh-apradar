@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <link rel="self" type="application/atom+xml" href="https://github.com/dsh-labs/dsh/releases.atom"/>
+  <link rel="alternate" type="text/html" href="https://github.com/dsh-labs/dsh/releases"/>
+  <id>tag:github.com,2008:/dsh-labs/dsh/releases</id>
+  <title>Release notes from dsh</title>
+  <updated>2024-05-14T09:12:00Z</updated>
+  <entry>
+    <id>tag:github.com,2008:Repository/123/v1.2.0</id>
+    <updated>2024-05-14T09:12:00Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/dsh-labs/dsh/releases/tag/v1.2.0"/>
+    <title>v1.2.0</title>
+    <content type="html">&lt;h2&gt;What&apos;s Changed&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;新增「关注源批量刷新」&lt;/li&gt;
+&lt;li&gt;修复 RSS 里 CDATA 被截断的问题&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;完整对比：&lt;a href=&quot;https://github.com/dsh-labs/dsh/compare/v1.1.0...v1.2.0&quot;&gt;v1.1.0...v1.2.0&lt;/a&gt;&lt;/p&gt;</content>
+    <author>
+      <name>dsh-bot</name>
+    </author>
+    <media:thumbnail url="https://avatars.githubusercontent.com/u/1?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/123/v1.1.0</id>
+    <updated>2024-04-02T03:40:11Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/dsh-labs/dsh/releases/tag/v1.1.0"/>
+    <title>v1.1.0</title>
+    <content type="html">&lt;h2&gt;What&apos;s Changed&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;持久化域从 3 个扩展到 4 个&lt;/li&gt;
+&lt;/ul&gt;</content>
+    <author>
+      <name>dsh-bot</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI 产品雷达 · 界面原型（Knit 风格）</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   AI 产品雷达 · 界面原型
+   设计语言取自 dsh-knit 的已验证实现（08_Knit/knit/src/client/client.js）：
+     · 交互强调色统一走 --dsw-alias-brand-primary-new-colorprimary-new-color
+     · 三档灰底由官方交互令牌按固定比例推（hover ×0.41 / active ×0.60 / chip ×0.90，
+       暗色再 ×0.9），不自己发明色
+     · 描边一律 0.5px，色值统一 --dsw-alias-border-l3
+     · 选中态只改底色 + 字重 600；焦点态统一 1px 强调色 outline + 1px offset
+     · 页签用下划线选中态；不做彩色 Badge、不做卡片瀑布、不用 Dashboard 大数字
+   本文件是评审原型：--apr-* 令牌在宿主内会直接继承 DSH 主题；
+   独立打开时用与 DSH 同值的回退色，深浅色由 html[data-theme] 切换。
+   ⚠️ 不使用 color-mix（旧内核会让整条声明失效，Knit 已踩过这个坑）。
+   ───────────────────────────────────────────────────────────── */
+:root{
+  color-scheme:light;
+  --apr-accent:var(--dsw-alias-brand-primary-new-colorprimary-new-color,#4176e6);
+  --apr-fg:var(--dsw-alias-label-primary,#0f1115);
+  --apr-fg-2:var(--dsw-alias-label-secondary,#61666b);
+  --apr-fg-3:var(--dsw-alias-label-caption,#adb2b8);
+  --apr-line:var(--dsw-alias-border-l3,rgba(0,0,0,.122));
+  --apr-line-2:var(--dsw-alias-border-l2,rgba(0,0,0,.102));
+  --apr-line-4:var(--dsw-alias-border-l4,rgba(0,0,0,.161));
+  --apr-hover:rgba(38,49,72,.024);
+  --apr-active:rgba(38,49,72,.061);
+  --apr-chip:rgba(38,49,72,.092);
+  --apr-bg:var(--dsw-alias-bg-base,#fff);
+  --apr-bg-soft:var(--dsw-alias-bg-module-platform,#f5f6f7);
+  --apr-canvas:#f4f4f1;
+  --apr-danger:var(--dsw-alias-state-error-primary,#ec1313);
+  --apr-warn:var(--dsw-alias-state-warn-label,#dd8629);
+  --apr-ok:var(--dsw-alias-state-success-primary,#22c55e);
+  --apr-add:#2f6b45;
+  --apr-del:#8f4038;
+  --apr-add-bg:rgba(1,162,65,.07);
+  --apr-del-bg:rgba(186,39,35,.06);
+  --apr-shadow:var(--dsw-shadow-lv2,0 4px 12px 0 rgba(0,0,0,.02),0 2px 8px 0 rgba(0,0,0,.04));
+  --apr-font:var(--dsw-font-family,-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei",system-ui,sans-serif);
+  --apr-mono:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,monospace);
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --apr-accent:var(--dsw-alias-brand-primary-new-colorprimary-new-color,#5686fe);
+  --apr-fg:var(--dsw-alias-label-primary,#f9fafb);
+  --apr-fg-2:var(--dsw-alias-label-secondary,#cfd3d6);
+  --apr-fg-3:var(--dsw-alias-label-caption,#81858c);
+  --apr-line:var(--dsw-alias-border-l3,rgba(255,255,255,.161));
+  --apr-line-2:var(--dsw-alias-border-l2,rgba(255,255,255,.122));
+  --apr-line-4:var(--dsw-alias-border-l4,rgba(255,255,255,.2));
+  --apr-hover:rgba(255,255,255,.028);
+  --apr-active:rgba(255,255,255,.076);
+  --apr-chip:rgba(255,255,255,.114);
+  --apr-bg:var(--dsw-alias-bg-base,#151517);
+  --apr-bg-soft:var(--dsw-alias-bg-layer-1,#232324);
+  --apr-canvas:#171717;
+  --apr-danger:var(--dsw-alias-state-error-primary,#f25a5a);
+  --apr-warn:var(--dsw-alias-state-warn-label,#dd8629);
+  --apr-ok:var(--dsw-alias-state-success-primary,#22c55e);
+  --apr-add:#7fc495;
+  --apr-del:#d98b83;
+  --apr-add-bg:rgba(65,201,119,.10);
+  --apr-del-bg:rgba(250,66,62,.10);
+  --apr-shadow:var(--dsw-shadow-lv2,0 4px 12px 0 rgba(0,0,0,.2),0 2px 8px 0 rgba(0,0,0,.24));
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;padding:22px 16px 40px;
+  background:var(--apr-canvas);color:var(--apr-fg);
+  font:13px/1.55 var(--apr-font);
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:transparent;border:0;padding:0;cursor:pointer}
+button:disabled{opacity:.48;cursor:not-allowed}
+a{color:inherit}
+:focus-visible{outline:1px solid var(--apr-accent);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.stage{max-width:760px;margin:0 auto}
+
+/* ── 评审工具条：**在产品画布之外**，不属于产品 UI ─────────────── */
+.review-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  max-width:700px;margin:0 auto 10px;color:var(--apr-fg-3);font-size:11px;
+}
+.review-tag{display:inline-flex;align-items:center;gap:7px;letter-spacing:.03em}
+.review-dot{width:6px;height:6px;border-radius:50%;background:var(--apr-fg-3);flex:none}
+.review-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.review-group{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.review-group>span{color:var(--apr-fg-3)}
+.review-btn{padding:2px 4px;border-radius:5px;color:var(--apr-fg-3);font-size:11px}
+.review-btn:hover{background:var(--apr-hover);color:var(--apr-fg-2)}
+.review-btn.active{color:var(--apr-fg);font-weight:600}
+
+/* ── 面板 ─────────────────────────────────────────────────── */
+.panel{
+  width:392px;max-width:100%;height:min(780px,calc(100vh - 104px));min-height:520px;
+  margin:0 auto;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--apr-bg);border:.5px solid var(--apr-line);border-radius:10px;
+  box-shadow:var(--apr-shadow);transition:width .18s ease;
+}
+.panel.wide{width:620px}
+.apr-root{display:flex;flex-direction:column;height:100%;min-height:0;color:var(--apr-fg);font-size:13px}
+
+/* ── 顶部：标识 / 名称 / 副标题 / 必要动作 ─────────────────── */
+.app-head{flex:none;display:flex;align-items:center;gap:9px;padding:12px 14px 8px}
+.radar-glyph{position:relative;flex:none;width:22px;height:22px;border:.5px solid var(--apr-line-4);border-radius:6px}
+.radar-glyph::before,.radar-glyph::after{content:"";position:absolute;border:.5px solid var(--apr-line-4);border-radius:50%}
+.radar-glyph::before{width:12px;height:12px;left:4.5px;top:4.5px}
+.radar-glyph::after{width:4px;height:4px;left:8.5px;top:8.5px;background:var(--apr-accent);border-color:var(--apr-accent)}
+.app-title{min-width:0}
+.app-title h1{margin:0;font-size:14px;line-height:20px;font-weight:600;letter-spacing:-.01em}
+.app-title p{margin:1px 0 0;font-size:11px;line-height:16px;color:var(--apr-fg-3)}
+.head-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+.quiet-btn{
+  display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 8px;border-radius:8px;
+  color:var(--apr-fg-3);font-size:11.5px;white-space:nowrap;transition:background .16s ease,color .16s ease;
+}
+.quiet-btn:hover{background:var(--apr-hover);color:var(--apr-fg)}
+.quiet-btn.strong{color:var(--apr-fg-2);font-weight:600}
+.quiet-btn.strong:hover{color:var(--apr-fg)}
+.spin{display:inline-block;animation:apr-spin .8s linear infinite}
+@keyframes apr-spin{to{transform:rotate(360deg)}}
+
+/* ── 状态行：一行弱化信息，**不画全宽横线**（同 Knit 的 .knit-usage 规则） ── */
+.statusline{
+  flex:none;display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:0 14px 4px;font-size:11.5px;line-height:18px;color:var(--apr-fg-3);
+}
+.statusline .sep{color:var(--apr-line-4)}
+.status-link{color:var(--apr-warn);font-size:11.5px}
+.status-link:hover{text-decoration:underline;text-underline-offset:3px}
+.statusline .push{margin-left:auto;font-size:11px}
+
+/* ── 内部导航：Knit 式下划线选中态，容器不画横线 ────────────── */
+.nav{flex:none;display:flex;gap:16px;padding:0 14px 6px}
+.nav button{
+  flex:none;height:30px;position:relative;
+  border-bottom:2px solid transparent;background:transparent;
+  color:var(--apr-fg-2);font-size:14px;font-weight:400;white-space:nowrap;
+  transition:color .15s,border-color .15s;
+}
+.nav button:hover{color:var(--apr-fg)}
+.nav button.active{color:var(--apr-fg);font-weight:600;border-bottom-color:var(--apr-fg)}
+.nav-count{margin-left:5px;color:var(--apr-fg-3);font-size:11px;font-weight:400;font-variant-numeric:tabular-nums}
+
+main{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;outline:none}
+main:focus-visible{outline:1px solid var(--apr-accent);outline-offset:-1px}
+
+/* ── 工具栏 ───────────────────────────────────────────────── */
+.toolbar{display:flex;flex-direction:column;gap:8px;padding:10px 14px 9px}
+.filters{display:flex;align-items:center;gap:13px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.filters::-webkit-scrollbar{display:none}
+.filter-link{flex:none;color:var(--apr-fg-3);font-size:11.5px;padding:2px 0}
+.filter-link:hover{color:var(--apr-fg-2)}
+.filter-link.active{color:var(--apr-fg);font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1.5px}
+.filter-count{margin-left:3px;color:var(--apr-fg-3);font-size:11px;font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:8px;min-width:0}
+.bar-sep{flex:none;width:1px;height:16px;background:var(--apr-line)}
+.mini-select{
+  flex:none;min-width:0;max-width:130px;padding:0 2px;height:28px;
+  border:0;background:transparent;color:var(--apr-fg-2);font-size:11.5px;
+}
+.mini-select:hover{color:var(--apr-fg)}
+.search{
+  flex:1 1 130px;min-width:0;max-width:220px;margin-left:auto;height:28px;padding:0 11px;
+  border-radius:10px;border:.5px solid var(--apr-line);background:transparent;outline:none;
+  color:var(--apr-fg);font-size:12.5px;transition:border-color .16s ease;
+}
+.search:focus{border-color:var(--apr-accent)}
+.search::placeholder{color:var(--apr-fg-3)}
+.list-head{display:flex;align-items:center;gap:6px;padding:0 14px 7px;color:var(--apr-fg-3);font-size:11px}
+.list-head .total{color:var(--apr-fg-2);font-variant-numeric:tabular-nums}
+.list-head .push{margin-left:auto}
+
+/* ── 变化列表：单列 + 细分隔线，不做卡片 ───────────────────── */
+.list{list-style:none;margin:0;padding:0}
+.row{padding:11px 14px;cursor:pointer;border-top:.5px solid var(--apr-line)}
+.row:first-child{border-top:0}
+.row:hover{background:var(--apr-hover)}
+.row.is-ignored{opacity:.6}
+.row-top{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;color:var(--apr-fg-2);font-size:11.5px;line-height:16px}
+.unread{flex:none;width:5px;height:5px;border-radius:50%;background:var(--apr-accent)}
+.unread.off{visibility:hidden}
+.row-product{min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-slash{color:var(--apr-line-4)}
+.row-type{color:var(--apr-fg-3);white-space:nowrap}
+.row-time{margin-left:auto;color:var(--apr-fg-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.row h3{
+  margin:6px 0 4px;font-size:14px;line-height:20px;font-weight:600;letter-spacing:-.005em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.row-sum{margin:0;color:var(--apr-fg-2);font-size:12px;line-height:18px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row-bottom{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:7px;color:var(--apr-fg-3);font-size:11px}
+.row-bottom .spacer{flex:1}
+.diff-mini{display:inline-flex;gap:6px;font-family:var(--apr-mono);font-size:11px}
+.diff-mini .add{color:var(--apr-add)}
+.diff-mini .del{color:var(--apr-del)}
+.row-status.warn{color:var(--apr-warn)}
+
+.footnote{padding:11px 14px 13px;color:var(--apr-fg-3);font-size:11.5px;line-height:1.7}
+.link-btn{color:var(--apr-fg-2);font-size:inherit;text-decoration:underline;text-underline-offset:3px}
+.link-btn:hover{color:var(--apr-accent)}
+
+/* ── 变化详情 ─────────────────────────────────────────────── */
+.detail-nav{padding:10px 14px 0}
+.back{color:var(--apr-fg-3);font-size:11.5px}
+.back:hover{color:var(--apr-fg)}
+.detail-head{padding:8px 14px 0}
+.detail-head h2{margin:0 0 6px;font-size:16px;line-height:23px;font-weight:600;letter-spacing:-.012em}
+.detail-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--apr-fg-3);font-size:11.5px}
+.detail-sub a{color:var(--apr-fg-2);text-decoration:none;border-bottom:.5px solid var(--apr-line-4)}
+.detail-sub a:hover{color:var(--apr-accent)}
+.detail-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:11px}
+.mini-label{color:var(--apr-fg-3);font-size:11px}
+.select{
+  padding:4px 6px;border:.5px solid var(--apr-line);border-radius:8px;
+  background:transparent;color:var(--apr-fg-2);font-size:11.5px;
+}
+.select:hover{border-color:var(--apr-line-4);color:var(--apr-fg)}
+.section{padding:0 14px;margin-top:17px}
+.section h4{margin:0 0 8px;color:var(--apr-fg-2);font-size:12.5px;font-weight:500}
+.section:last-of-type{padding-bottom:18px}
+.kv{display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px 10px;font-size:12px}
+.kv .key{color:var(--apr-fg-3)}
+.kv .value{min-width:0;overflow-wrap:anywhere;color:var(--apr-fg-2)}
+.kv .value a{color:var(--apr-fg-2);text-decoration:none;border-bottom:.5px solid var(--apr-line-4)}
+.kv .value a:hover{color:var(--apr-accent)}
+.quote{margin:0;padding:1px 0 1px 11px;border-left:2px solid var(--apr-line-4);
+  color:var(--apr-fg-2);font-size:12px;line-height:1.75}
+.quote-by{display:block;margin-top:5px;color:var(--apr-fg-3);font-size:11px}
+.diff{font:11px/1.75 var(--apr-mono);overflow:hidden}
+.diff-line{display:flex;gap:9px;padding:2px 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.diff-line.ctx{color:var(--apr-fg-3)}
+.diff-line.add{color:var(--apr-add);background:var(--apr-add-bg)}
+.diff-line.del{color:var(--apr-del);background:var(--apr-del-bg)}
+.diff-sign{flex:none;width:9px;opacity:.8}
+.note-inline{margin-top:8px;color:var(--apr-fg-3);font-size:11px;line-height:1.7}
+.fact{padding-left:11px;margin:0 0 11px;border-left:2px solid var(--apr-line-4)}
+.fact:last-child{margin-bottom:0}
+.fact-label{color:var(--apr-fg);font-size:11.5px;font-weight:600;margin-bottom:3px}
+.fact p{margin:0;color:var(--apr-fg-2);font-size:12px;line-height:1.75}
+.fact.inference{border-left-style:dashed;border-left-color:var(--apr-warn)}
+.fact.inference .fact-label{color:var(--apr-warn)}
+.note-area{
+  width:100%;min-height:66px;resize:vertical;padding:8px 9px;
+  border:.5px solid var(--apr-line);border-radius:8px;background:transparent;
+  color:var(--apr-fg);font-size:12px;line-height:1.6;
+}
+.note-area:focus{border-color:var(--apr-accent);outline:none}
+.save-row{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.save-status{color:var(--apr-fg-3);font-size:11px}
+
+/* ── 关注源 ───────────────────────────────────────────────── */
+.section-bar{display:flex;align-items:center;gap:6px;padding:11px 14px 8px;color:var(--apr-fg-3);font-size:11.5px}
+.section-bar strong{color:var(--apr-fg-2);font-weight:600}
+.section-bar .right{margin-left:auto}
+.source{padding:11px 14px;border-top:.5px solid var(--apr-line)}
+.source:first-of-type{border-top:0}
+.source-top{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;min-width:0}
+.source-name{font-size:13px;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.source-kind{color:var(--apr-fg-3);font-size:11px;white-space:nowrap}
+.source-enabled{margin-left:auto;color:var(--apr-fg-3);font-size:11px;white-space:nowrap}
+.source-enabled.on{color:var(--apr-ok)}
+.source-url{display:block;margin-top:3px;color:var(--apr-fg-3);font-size:11.5px;
+  overflow-wrap:anywhere;text-decoration:none}
+.source-url:hover{color:var(--apr-accent)}
+.source-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:6px;
+  color:var(--apr-fg-3);font-size:11px}
+.source-error{margin-top:8px;padding:1px 0 1px 10px;border-left:2px solid var(--apr-danger);
+  color:var(--apr-danger);font-size:11.5px;line-height:1.65}
+.source-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.source-actions button{color:var(--apr-fg-3);font-size:11.5px}
+.source-actions button:hover{color:var(--apr-fg)}
+.scope-row{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:.5px solid var(--apr-line)}
+.scope-row:first-of-type{border-top:0}
+.scope-copy{flex:1;min-width:0}
+.scope-copy strong{display:block;font-weight:600;font-size:12px;color:var(--apr-fg-2)}
+.scope-copy span{display:block;color:var(--apr-fg-3);font-size:11px;margin-top:2px;line-height:1.6}
+.scope-tag{flex:none;color:var(--apr-fg-3);font-size:11px;white-space:nowrap}
+
+/* ── 机会池 ───────────────────────────────────────────────── */
+.opp{padding:11px 14px;border-top:.5px solid var(--apr-line)}
+.opp:first-of-type{border-top:0}
+.opp-top{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:5px;color:var(--apr-fg-3);font-size:11.5px}
+.opp-state{color:var(--apr-fg-2);font-weight:600}
+.opp-project{margin-left:auto}
+.opp h3{margin:0;font-size:14px;line-height:20px;font-weight:600;letter-spacing:-.005em}
+.opp-source{display:block;margin:6px 0 8px;text-align:left;color:var(--apr-fg-3);font-size:11.5px}
+.opp-source:hover{color:var(--apr-accent)}
+.opp-field{margin-top:4px;color:var(--apr-fg-2);font-size:12px;line-height:1.7}
+.opp-field .key{color:var(--apr-fg-3)}
+.opp-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px}
+
+/* ── 空态 / 加载 / 失败 ───────────────────────────────────── */
+.state{padding:48px 20px;text-align:center;color:var(--apr-fg-3)}
+.state-mark{width:30px;height:30px;margin:0 auto 12px;border:.5px solid var(--apr-line-4);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--apr-fg-3);font-size:14px}
+.state-title{color:var(--apr-fg-2);font-size:12.5px;font-weight:600;margin-bottom:5px}
+.state p{margin:0 auto;max-width:270px;font-size:11.5px;line-height:1.75}
+.state .link-btn{font-size:11.5px}
+.skeleton{padding:13px 14px;border-top:.5px solid var(--apr-line)}
+.skeleton:first-child{border-top:0}
+.skeleton span{display:block;height:7px;margin:0 0 9px;border-radius:3px;background:var(--apr-chip);
+  animation:apr-breathe 1.25s ease-in-out infinite alternate}
+.skeleton span:nth-child(1){width:34%}
+.skeleton span:nth-child(2){width:90%;height:10px}
+.skeleton span:nth-child(3){width:64%;margin-bottom:0}
+@keyframes apr-breathe{to{opacity:.45}}
+
+/* ── 底栏：唯一保留的一条全宽横线，承载演示数据声明 ─────────── */
+.bottomline{
+  flex:none;display:flex;align-items:center;gap:8px;padding:7px 14px;
+  border-top:.5px solid var(--apr-line);color:var(--apr-fg-3);font-size:11px;line-height:1.5;
+}
+.bottomline .push{margin-left:auto;white-space:nowrap}
+.mini-dot{flex:none;width:5px;height:5px;border-radius:50%;background:var(--apr-ok)}
+.mini-dot.warn{background:var(--apr-warn)}
+
+/* ── 弹窗 ─────────────────────────────────────────────────── */
+.backdrop{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(15,17,21,.34)}
+.backdrop[hidden]{display:none}
+.modal{width:min(400px,100%);background:var(--apr-bg);border:.5px solid var(--apr-line-4);
+  border-radius:10px;box-shadow:var(--apr-shadow)}
+.modal-head{display:flex;align-items:center;padding:12px 14px;border-bottom:.5px solid var(--apr-line)}
+.modal-head h2{margin:0;font-size:13px;font-weight:600}
+.modal-head button{margin-left:auto;color:var(--apr-fg-3);font-size:12px}
+.modal-head button:hover{color:var(--apr-fg)}
+.modal-body{padding:13px 14px}
+.field{display:block;margin-bottom:11px}
+.field span{display:block;color:var(--apr-fg-3);font-size:11px;margin-bottom:5px}
+.field input,.field select{
+  width:100%;padding:7px 8px;border:.5px solid var(--apr-line);border-radius:8px;
+  background:transparent;color:var(--apr-fg);font-size:12px;
+}
+.field input:focus,.field select:focus{border-color:var(--apr-accent);outline:none}
+.modal-note{margin:2px 0 12px;color:var(--apr-fg-3);font-size:11px;line-height:1.7}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:.5px solid var(--apr-line)}
+.btn{height:28px;padding:0 11px;border-radius:8px;border:.5px solid var(--apr-line-4);
+  color:var(--apr-fg-2);font-size:11.5px;transition:background .16s ease,color .16s ease}
+.btn:hover{background:var(--apr-hover);color:var(--apr-fg)}
+.btn.primary{background:var(--apr-active);color:var(--apr-fg);border-color:var(--apr-line-4)}
+.btn.primary:hover{background:var(--apr-chip)}
+.toast{
+  position:fixed;z-index:20;left:50%;bottom:20px;transform:translateX(-50%);
+  max-width:calc(100% - 28px);padding:8px 12px;border:.5px solid var(--apr-line-4);border-radius:8px;
+  background:var(--apr-bg);color:var(--apr-fg-2);font-size:11.5px;line-height:1.6;box-shadow:var(--apr-shadow);
+}
+.toast[hidden]{display:none}
+
+@media (max-width:520px){
+  body{padding:12px 8px 22px}
+  .review-bar{flex-direction:column;align-items:flex-start;gap:6px}
+  .panel,.panel.wide{width:100%;height:calc(100vh - 112px);min-height:480px;border-radius:8px}
+  .row,.source,.opp,.section,.detail-head,.detail-nav,.toolbar,.list-head,.section-bar,.footnote,.scope-row,.bottomline{padding-left:11px;padding-right:11px}
+  .statusline,.nav,.app-head{padding-left:11px;padding-right:11px}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <!-- 评审工具：在产品画布之外，明确标记为评审用途 -->
+  <div class="review-bar" aria-label="原型评审工具，不属于产品界面">
+    <span class="review-tag"><span class="review-dot"></span>AI PRODUCT RADAR ／ 界面评审原型</span>
+    <div class="review-controls">
+      <span class="review-group"><span>外观</span><button class="review-btn active" data-theme="light">浅色</button><button class="review-btn" data-theme="dark">深色</button></span>
+      <span class="review-group"><span>宽度</span><button class="review-btn active" data-width="narrow">侧栏</button><button class="review-btn" data-width="wide">宽屏</button></span>
+      <span class="review-group"><span>状态</span><button class="review-btn active" data-preview="normal">正常</button><button class="review-btn" data-preview="loading">加载</button><button class="review-btn" data-preview="empty">空</button><button class="review-btn" data-preview="fail">失败</button></span>
+    </div>
+  </div>
+
+  <section class="panel" id="panel" aria-label="AI 产品雷达">
+    <div class="apr-root">
+      <header class="app-head">
+        <span class="radar-glyph" aria-hidden="true"></span>
+        <div class="app-title"><h1>AI 产品雷达</h1><p>跟踪产品变化 · 沉淀研究机会</p></div>
+        <div class="head-actions">
+          <button class="quiet-btn" id="sourceStatus">来源状态</button>
+          <button class="quiet-btn strong" id="refreshBtn">↻ 刷新</button>
+        </div>
+      </header>
+      <div class="statusline" id="statusline"></div>
+      <nav class="nav" id="navTabs" aria-label="主视图">
+        <button class="active" data-view="inbox">变化<span class="nav-count" id="countInbox">2</span></button>
+        <button data-view="sources">关注源<span class="nav-count" id="countSources">5</span></button>
+        <button data-view="opps">机会池<span class="nav-count" id="countOpps">2</span></button>
+      </nav>
+      <main id="main" tabindex="0"></main>
+      <div class="bottomline">
+        <span class="mini-dot" id="footerDot"></span>
+        <span id="footerStatus">示例数据 · 不代表真实产品更新</span>
+        <span class="push" id="bottomRight">未连接真实来源</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="backdrop" id="modalBackdrop" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <form id="sourceForm">
+      <div class="modal-head"><h2 id="modalTitle">添加关注源</h2><button type="button" id="closeModal" aria-label="关闭">✕</button></div>
+      <div class="modal-body">
+        <label class="field"><span>来源名称</span><input name="name" required maxlength="80" placeholder="例如：某项目 Releases" /></label>
+        <label class="field"><span>来源类型</span><select name="type"><option value="github_releases">GitHub Releases / Atom</option><option value="rss_atom">RSS / Atom</option><option value="html_static">公开静态页面（有条件支持）</option></select></label>
+        <label class="field"><span>来源 URL</span><input name="url" type="url" required maxlength="2048" placeholder="https://…" /></label>
+        <p class="modal-note">评审原型：保存只写入当前页面的内存列表，不访问网络、不写入任何持久化数据。正式插件必须走 DSH Host 的受控抓取入口，并执行来源地址安全校验。</p>
+      </div>
+      <div class="modal-actions"><button class="btn" type="button" id="cancelModal">取消</button><button class="btn primary" type="submit">保存来源</button></div>
+    </form>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+
+/* 所有记录都是**界面夹具（fixture）**，不是实时产品动态。
+   原型不访问网络、不读写持久化：任何「刷新 / 保存 / 测试 / 删除」都只改当前页面内存。 */
+const sources = [
+  { id: "s1", type: "github_releases", name: "DeepSeek Harness（示例）", url: "https://github.com/deepseek-ai/deepseek-harness/releases", enabled: true, lastOkAt: "今天 09:24", status: "ok", controlled: true },
+  { id: "s2", type: "rss_atom", name: "OpenAI 官方更新（示例）", url: "https://openai.com/news/", enabled: true, lastOkAt: "今天 09:24", status: "ok", controlled: true },
+  { id: "s3", type: "html_static", name: "Google AI 博客（示例）", url: "https://blog.google/technology/ai/", enabled: true, lastOkAt: "昨天 21:02", status: "fail", controlled: false, failReason: "示例失败状态：页面没有按配置规则解析出条目。真实产品应保留失败原因，且不生成任何变化记录。", failDetail: "连续失败 2 次" },
+  { id: "s4", type: "github_releases", name: "Knit（我的项目）", url: "https://github.com/PolinniZhong/dsh-knit/releases", enabled: true, lastOkAt: "今天 09:24", status: "ok", controlled: true },
+  { id: "s5", type: "rss_atom", name: "候选竞品源（示例）", url: "https://example.com/feed.xml", enabled: false, lastOkAt: "3 天前", status: "unknown", controlled: false }
+];
+const changes = [
+  { id: "c1", sourceId: "s1", product: "DeepSeek Harness（示例）", kind: "GitHub Releases", version: "示例版本", title: "示例：插件可通过 Host 路由向页面提供数据", summary: "用来展示技术类更新的标题、变化证据与兼容性待验证项。此内容为界面夹具，不代表真实发布记录。", discoveredAt: "今天 09:24", publishedAt: "3 天前（示例）", status: "unread", excerpt: "示例摘录：插件可以注册一条受控的 Host 路由，客户端通过约定的请求地址读取数据。", diff: [{ t: "ctx", s: "Host 插件接口" }, { t: "add", s: "增加一条路由注册示例" }, { t: "add", s: "补充路由注销与生命周期说明" }, { t: "del", s: "删除旧版示例描述" }], facts: ["示例事实：如果来源原文明确写出了路由注册能力，详情页应引用该原文并链接回来源。", "示例边界：页面没有证据时，不应声称该能力已在所有运行环境中验证。"], inferences: ["可能减少自定义 Client—Host 通信代码；需在 Web 与 Desktop 中分别验证。"], note: "", opportunityId: null, sourceStatus: "示例：抓取成功 · 与上一份快照存在差异", adds: 2, removes: 1 },
+  { id: "c2", sourceId: "s2", product: "OpenAI（示例）", kind: "官方更新（示例）", version: null, title: "示例：项目级上下文设置的产品变化", summary: "演示如何把产品更新与 Knit 的上下文检索定位关联，同时把可能的影响保留为待验证判断。", discoveredAt: "今天 08:12", publishedAt: "今天 09:10（示例）", status: "seen", excerpt: "示例摘录：用户可以在项目范围内配置一项上下文相关设置。", diff: [{ t: "ctx", s: "项目设置" }, { t: "add", s: "新增一项可配置选项（示例）" }, { t: "ctx", s: "其他现有项目资源保持不变（示例）" }], facts: ["示例事实：来源提到一项新的项目级设置。具体名称、默认值和适用范围均应以正式原文为准。"], inferences: ["它可能影响项目上下文类工具的用户预期；是否构成替代方案仍需进一步对比。"], note: "先核实功能范围、默认行为和可用地区，再判断影响。", opportunityId: "o1", sourceStatus: "示例：成功获取来源 · 使用示例快照完成差异展示", adds: 1, removes: 0 },
+  { id: "c3", sourceId: "s4", product: "Knit（我的项目）", kind: "GitHub Releases", version: "示例版本", title: "示例：上下文检索增加关系证据展示", summary: "演示自有项目也可以作为关注源，但是否值得进入机会池由用户自行判断。", discoveredAt: "昨天 21:02", publishedAt: "4 天前（示例）", status: "ignored", excerpt: "示例摘录：检索条目可以展示触发命中的文件与关系依据。", diff: [{ t: "ctx", s: "检索结果" }, { t: "add", s: "增加来源关系依据（示例）" }], facts: ["示例事实：只有能够回到具体文件和行号的关系证据，才能作为详情页里的可核验依据。"], inferences: [], note: "自己的迭代记录，暂时不纳入机会研究。", opportunityId: null, sourceStatus: "示例：存在可比快照", adds: 1, removes: 0 },
+  { id: "c4", sourceId: "s1", product: "DeepSeek Harness（示例）", kind: "GitHub Releases", version: "示例版本", title: "示例：持久化领域增加单条记录恢复策略", summary: "演示数据层变更如何连到插件自己的存储模型与恢复策略。", discoveredAt: "昨天 18:36", publishedAt: "5 天前（示例）", status: "opp", excerpt: "示例摘录：存储层可以按记录粒度处理无效数据，避免单条损坏直接影响其他记录。", diff: [{ t: "ctx", s: "Storage Domain" }, { t: "add", s: "增加单条记录级的处理策略（示例）" }, { t: "add", s: "补充损坏记录恢复说明（示例）" }], facts: ["示例事实：必须先确认目标后端确实支持所需策略，再把它写进技术方案。"], inferences: ["按记录隔离可能适合体量较大的变化历史，但仍需验证索引一致性与恢复成本。"], note: "", opportunityId: "o2", sourceStatus: "示例：抓取成功 · 与上一份快照存在差异", adds: 2, removes: 0 }
+];
+const opportunities = [
+  { id: "o1", title: "项目级上下文能力对检索工具定位的影响", changeId: "c2", project: "Knit", note: "确认平台提供的能力覆盖到什么范围，再判断 Knit 的差异化空间。", question: "默认行为、跨会话边界和数据保留方式分别是什么？", nextAction: "核对官方文档和实际产品界面后再做结论。", status: "researching" },
+  { id: "o2", title: "变化记录的存储布局与损坏恢复", changeId: "c4", project: "AI 产品雷达", note: "变化记录多、每条可独立查看，存储结构需要方便隔离和重建。", question: "JSON 后端的枚举、索引恢复和部分写入失败如何处理？", nextAction: "先做最小技术验证，再确定 SDD。", status: "research" }
+];
+const state = { view: "inbox", detailId: null, theme: "light", width: "narrow", preview: "normal", filterStatus: "all", filterType: "all", query: "", sort: "discovered", refreshing: false, lastRefresh: "今天 09:24（示例）", editingSourceId: null };
+const labels = { unread: "未处理", seen: "已查看", ignored: "已忽略", opp: "已入机会池" };
+const oppLabels = { research: "待研究", researching: "验证中", planned: "已进入规划", dropped: "不再跟进" };
+const typeLabels = { github_releases: "GitHub Releases / Atom", rss_atom: "RSS / Atom", html_static: "静态页面" };
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const sourceOf = (id) => sources.find(s => s.id === id);
+const changeOf = (id) => changes.find(c => c.id === id);
+const opportunityOf = (id) => opportunities.find(o => o.id === id);
+/* 所有动作反馈都带这个前缀：原型不能显示「操作成功」的假反馈。 */
+const DEMO = "演示操作：";
+let toastTimer = null;
+
+function showToast(message) {
+  const node = $("toast");
+  node.textContent = message;
+  node.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { node.hidden = true; }, 3200);
+}
+function setTheme(theme) {
+  state.theme = theme;
+  document.documentElement.dataset.theme = theme;
+  document.querySelectorAll("[data-theme]").forEach(el => el.classList.toggle("active", el.dataset.theme === theme));
+}
+function setWidth(width) {
+  state.width = width;
+  $("panel").classList.toggle("wide", width === "wide");
+  document.querySelectorAll("[data-width]").forEach(el => el.classList.toggle("active", el.dataset.width === width));
+}
+function setPreview(preview) {
+  state.preview = preview;
+  document.querySelectorAll("[data-preview]").forEach(el => el.classList.toggle("active", el.dataset.preview === preview));
+  render();
+}
+function counts() {
+  $("countInbox").textContent = String(changes.filter(c => c.status === "unread").length);
+  $("countSources").textContent = String(sources.length);
+  $("countOpps").textContent = String(opportunities.length);
+}
+function renderStatus() {
+  const enabled = sources.filter(s => s.enabled);
+  const failed = enabled.filter(s => s.status === "fail");
+  const parts = [
+    `<span>上次刷新 ${esc(state.lastRefresh)}</span>`,
+    `<span class="sep">·</span>`,
+    `<span>${enabled.length} 个来源启用</span>`,
+    `<span class="sep">·</span>`,
+    failed.length
+      ? `<button class="status-link" data-action="go-sources">${failed.length} 个来源异常</button>`
+      : `<span>当前无异常来源</span>`,
+    `<span class="push">示例数据 · 不代表真实产品更新</span>`
+  ];
+  $("statusline").innerHTML = parts.join("");
+  $("footerDot").classList.toggle("warn", failed.length > 0);
+  $("refreshBtn").disabled = state.refreshing;
+  $("refreshBtn").innerHTML = state.refreshing ? `<span class="spin">↻</span> 刷新中` : "↻ 刷新";
+  counts();
+}
+function renderTabs() {
+  document.querySelectorAll("#navTabs button").forEach(b => b.classList.toggle("active", b.dataset.view === state.view));
+}
+function filteredChanges() {
+  let rows = [...changes];
+  if (state.filterStatus !== "all") rows = rows.filter(c => c.status === state.filterStatus);
+  if (state.filterType !== "all") rows = rows.filter(c => (sourceOf(c.sourceId) || {}).type === state.filterType);
+  const query = state.query.trim().toLowerCase();
+  if (query) rows = rows.filter(c => `${c.product} ${c.title} ${c.summary} ${c.excerpt}`.toLowerCase().includes(query));
+  const key = state.sort === "published" ? "publishedAt" : "discoveredAt";
+  rows.sort((a, b) => String(b[key] || "").localeCompare(String(a[key] || ""), "zh-CN"));
+  return rows;
+}
+function changeRow(c) {
+  const src = sourceOf(c.sourceId);
+  const unread = c.status === "unread";
+  const diff = (c.adds || 0) || (c.removes || 0);
+  return `<li class="row${c.status === "ignored" ? " is-ignored" : ""}" role="button" tabindex="0" data-action="open-change" data-id="${esc(c.id)}">
+    <div class="row-top"><span class="unread${unread ? "" : " off"}"></span><span class="row-product">${esc(c.product)}</span><span class="row-slash">/</span><span class="row-type">${esc(src ? typeLabels[src.type] || c.kind : c.kind)}</span><span class="row-time">${esc(c.discoveredAt)}</span></div>
+    <h3>${esc(c.title)}</h3>
+    <p class="row-sum">${esc(c.summary)}</p>
+    <div class="row-bottom"><span>${esc(c.publishedAt)}</span>${diff ? `<span class="sep">·</span><span class="diff-mini"><span class="add">+${c.adds || 0}</span><span class="del">−${c.removes || 0}</span></span>` : ""}<span class="spacer"></span><span class="row-status${src && src.status === "fail" ? " warn" : ""}">${esc(labels[c.status] || "")}</span></div>
+  </li>`;
+}
+function renderToolbar() {
+  const statuses = [["all", "全部"], ["unread", "未处理"], ["seen", "已查看"], ["ignored", "已忽略"], ["opp", "已入机会池"]];
+  const filters = statuses.map(([key, label]) => {
+    const n = key === "all" ? changes.length : changes.filter(c => c.status === key).length;
+    return `<button class="filter-link${state.filterStatus === key ? " active" : ""}" data-action="filter-status" data-value="${key}">${label}<span class="filter-count">${n}</span></button>`;
+  }).join("");
+  const typeOptions = Object.entries(typeLabels).map(([k, v]) => `<option value="${k}"${state.filterType === k ? " selected" : ""}>${esc(v)}</option>`).join("");
+  const rows = filteredChanges();
+  return `<div class="toolbar">
+    <div class="filters">${filters}</div>
+    <div class="bar">
+      <select class="mini-select" id="sourceTypeFilter" aria-label="来源类型"><option value="all">全部来源</option>${typeOptions}</select>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <select class="mini-select" id="changeSort" aria-label="排序方式"><option value="discovered"${state.sort === "discovered" ? " selected" : ""}>按发现时间</option><option value="published"${state.sort === "published" ? " selected" : ""}>按发布时间</option></select>
+      <input class="search" type="search" id="changeSearch" value="${esc(state.query)}" placeholder="搜索产品、变化或原文…" aria-label="搜索变化" />
+    </div>
+  </div>
+  <div class="list-head"><span class="total">${rows.length}</span><span>条变化</span><span class="push">列表不展示相关度分数</span></div>`;
+}
+function renderSkeleton(n) {
+  return Array.from({ length: n || 4 }, () => `<div class="skeleton"><span></span><span></span><span></span></div>`).join("");
+}
+function renderInbox() {
+  if (state.detailId) return renderDetail();
+  const rows = filteredChanges();
+  let body = renderToolbar();
+  if (state.preview === "loading") {
+    body += renderSkeleton();
+  } else if (state.preview === "fail") {
+    body += `<div class="state"><div class="state-mark">!</div><div class="state-title">本次刷新没有成功</div><p>来源没有返回可用内容。抓取失败不等于“没有更新”，这里也不会写入任何变化记录。</p><p style="margin-top:11px"><button class="link-btn" data-action="go-sources">查看来源状态 →</button></p></div>`;
+  } else if (state.preview === "empty" || !rows.length) {
+    const narrowed = state.query || state.filterStatus !== "all" || state.filterType !== "all";
+    body += `<div class="state"><div class="state-mark">⌕</div><div class="state-title">${narrowed ? "没有匹配的变化" : "还没有发现变化"}</div><p>${narrowed ? "可以清空搜索词，或把筛选条件放宽。" : "刷新已启用的来源后，新增或发生实质变化的条目会出现在这里。"}</p></div>`;
+  } else {
+    body += `<ul class="list">${rows.map(changeRow).join("")}</ul>`;
+    if (sources.some(s => s.enabled && s.status === "fail")) {
+      body += `<div class="footnote">有来源本次未能获取成功。这只是本次没有结论，不代表相关产品没有更新。<button class="link-btn" data-action="go-sources">查看来源状态 →</button></div>`;
+    }
+  }
+  $("main").innerHTML = body;
+}
+function renderDetail() {
+  const c = changeOf(state.detailId);
+  if (!c) { state.detailId = null; return renderInbox(); }
+  const s = sourceOf(c.sourceId);
+  const opp = c.opportunityId ? opportunityOf(c.opportunityId) : null;
+  const url = s ? s.url : "";
+  const diffRows = c.diff.length
+    ? c.diff.map(d => {
+        const type = d.t === "add" ? "add" : d.t === "del" ? "del" : "ctx";
+        const sign = type === "add" ? "+" : type === "del" ? "−" : "·";
+        return `<div class="diff-line ${type}"><span class="diff-sign">${sign}</span><span>${esc(d.s)}</span></div>`;
+      }).join("")
+    : `<div class="note-inline">暂无可比较的成功快照，因此没有差异可展示。此状态不能证明来源没有发生变化。</div>`;
+  $("main").innerHTML = `
+    <div class="detail-nav"><button class="back" data-action="back-inbox">← 返回变化列表</button></div>
+    <div class="detail-head">
+      <h2>${esc(c.title)}</h2>
+      <div class="detail-sub">
+        <span>${esc(c.product)}</span><span>·</span><span>${esc(c.kind)}</span>
+        ${c.version ? `<span>·</span><span>${esc(c.version)}</span>` : ""}
+        <span>·</span>${s ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">打开原始来源 ↗</a>` : `<span>原始来源链接缺失</span>`}
+      </div>
+      <div class="detail-actions">
+        <span class="mini-label">处理状态</span>
+        <select class="select" id="detailStatus">
+          <option value="unread"${c.status === "unread" ? " selected" : ""}>未处理</option>
+          <option value="seen"${c.status === "seen" ? " selected" : ""}>已查看</option>
+          <option value="ignored"${c.status === "ignored" ? " selected" : ""}>已忽略</option>
+          <option value="opp"${c.status === "opp" ? " selected" : ""}>已入机会池</option>
+        </select>
+        ${opp
+          ? `<button class="quiet-btn strong" data-action="go-opps">查看关联机会 →</button>`
+          : `<button class="quiet-btn strong" data-action="make-opp">转为产品机会 →</button>`}
+      </div>
+    </div>
+
+    <section class="section"><h4>来源与时间</h4>
+      <div class="kv">
+        <div class="key">来源</div><div class="value">${s ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a>` : "未知来源"}</div>
+        <div class="key">官方发布</div><div class="value">${esc(c.publishedAt || "未获取到")}</div>
+        <div class="key">发现时间</div><div class="value">${esc(c.discoveredAt)}</div>
+        <div class="key">获取状态</div><div class="value">${esc(c.sourceStatus)}</div>
+      </div>
+    </section>
+
+    <section class="section"><h4>原文摘录</h4>
+      <blockquote class="quote">${esc(c.excerpt || "暂无原文摘录。请打开原始来源核实，不要用模型生成的内容替代原文。")}
+        <span class="quote-by">${s ? esc(s.name) : "来源未知"} · ${c.excerpt ? "界面夹具摘录" : "无摘录"}</span>
+      </blockquote>
+    </section>
+
+    <section class="section"><h4>与上一份快照的差异</h4>
+      <div class="diff">${diffRows}</div>
+      <div class="note-inline">差异仅用于展示布局。正式产品应基于两次成功获取的快照计算，并同时显示这两份快照的时间。</div>
+    </section>
+
+    <section class="section"><h4>来源事实</h4>
+      ${c.facts.map(f => `<div class="fact"><div class="fact-label">原文支持 · 示例</div><p>${esc(f)}</p></div>`).join("")}
+    </section>
+
+    <section class="section"><h4>产品判断 · 待验证</h4>
+      ${c.inferences.length
+        ? c.inferences.map(i => `<div class="fact inference"><div class="fact-label">个人推断 · 来源未证实</div><p>${esc(i)}</p></div>`).join("")
+        : `<div class="note-inline">暂未添加产品判断。</div>`}
+    </section>
+
+    <section class="section"><h4>研究备注</h4>
+      <textarea class="note-area" id="detailNote" placeholder="记录这条变化与自己的项目有什么关系、还需要核实什么…">${esc(c.note || "")}</textarea>
+      <div class="save-row">
+        <button class="quiet-btn strong" data-action="save-note">保存备注</button>
+        <span class="save-status" id="noteSaveStatus">未保存 · 原型没有持久化</span>
+      </div>
+      ${opp ? `<div class="note-inline">已关联机会：${esc(opp.title)}</div>` : ""}
+    </section>`;
+}
+function renderSources() {
+  const rows = sources.map(s => `<div class="source">
+    <div class="source-top">
+      <span class="source-name">${esc(s.name)}</span>
+      <span class="source-kind">${esc(typeLabels[s.type] || s.type)}</span>
+      <span class="source-enabled${s.enabled ? " on" : ""}">${s.enabled ? "已启用" : "已停用"}</span>
+    </div>
+    <a class="source-url" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.url)}</a>
+    <div class="source-meta">
+      <span>${s.status === "ok" ? "最近一次成功" : s.status === "fail" ? "最近一次失败" : "尚未检查"}：${esc(s.lastOkAt)}</span>
+      <span class="sep">·</span>
+      <span>${s.controlled ? "P0 完全受控类型" : "有条件支持 · 需逐站点验证"}</span>
+    </div>
+    ${s.status === "fail" && s.enabled ? `<div class="source-error">${esc(s.failReason)}${s.failDetail ? ` ${esc(s.failDetail)}` : ""}</div>` : ""}
+    <div class="source-actions">
+      <button data-action="test-source" data-id="${esc(s.id)}">测试（演示）</button>
+      <button data-action="toggle-source" data-id="${esc(s.id)}">${s.enabled ? "停用" : "启用"}</button>
+      <button data-action="edit-source" data-id="${esc(s.id)}">编辑</button>
+      <button data-action="remove-source" data-id="${esc(s.id)}">删除</button>
+    </div>
+  </div>`).join("");
+  $("main").innerHTML = `
+    <div class="section-bar"><strong>已配置来源</strong><span>${sources.length}</span><span class="right"><button class="link-btn" data-action="add-source">＋ 添加来源</button></span></div>
+    ${rows}
+    <div class="section-bar" style="padding-top:14px"><strong>P0 支持范围</strong></div>
+    <div class="scope-row"><div class="scope-copy"><strong>GitHub Releases / Atom</strong><span>只接收 owner / repo，URL 由代码拼接；请求预算仍需控制</span></div><span class="scope-tag">完全受控</span></div>
+    <div class="scope-row"><div class="scope-copy"><strong>RSS / Atom</strong><span>限于已通过核心 Fixture 的格式子集；自定义 feedUrl 需标注有条件支持</span></div><span class="scope-tag">有条件</span></div>
+    <div class="scope-row"><div class="scope-copy"><strong>公开静态页面</strong><span>需逐站点验证解析规则；动态渲染、登录态与反爬页面不在第一版承诺范围</span></div><span class="scope-tag">有条件</span></div>
+    <div class="footnote">来源检测与外网抓取在本原型中均为演示操作，不会发起任何网络请求。正式插件只能经由 DSH Host 的受控抓取入口访问公开网页，复制用户提供的地址前需给出授权与安全提示，且不承诺完整的 SSRF 防护。</div>`;
+}
+function renderOpps() {
+  if (!opportunities.length) {
+    $("main").innerHTML = `<div class="state"><div class="state-mark">＋</div><div class="state-title">机会池暂时为空</div><p>打开一条变化记录，选择“转为产品机会”，把需要进一步验证的问题沉淀下来。</p><p style="margin-top:11px"><button class="link-btn" data-action="go-inbox">查看变化列表 →</button></p></div>`;
+    return;
+  }
+  const body = opportunities.map(o => {
+    const c = changeOf(o.changeId);
+    const options = Object.entries(oppLabels).map(([k, v]) => `<option value="${k}"${o.status === k ? " selected" : ""}>${esc(v)}</option>`).join("");
+    return `<article class="opp">
+      <div class="opp-top"><span class="opp-state">${esc(oppLabels[o.status] || o.status)}</span><span class="opp-project">${esc(o.project)}</span></div>
+      <h3>${esc(o.title)}</h3>
+      <button class="opp-source" data-action="open-change" data-id="${esc(o.changeId)}">↳ 来源变化：${esc(c ? c.title : "原始变化已不存在")}</button>
+      ${o.note ? `<div class="opp-field"><span class="key">当前判断：</span>${esc(o.note)}</div>` : ""}
+      ${o.question ? `<div class="opp-field"><span class="key">待验证：</span>${esc(o.question)}</div>` : ""}
+      ${o.nextAction ? `<div class="opp-field"><span class="key">下一步：</span>${esc(o.nextAction)}</div>` : ""}
+      <div class="opp-status">
+        <span class="mini-label">状态</span>
+        <select class="select" data-action="opp-status" data-id="${esc(o.id)}" aria-label="机会状态">${options}</select>
+        <button class="link-btn" data-action="edit-opp" data-id="${esc(o.id)}">编辑记录</button>
+      </div>
+    </article>`;
+  }).join("");
+  $("main").innerHTML = `
+    <div class="section-bar"><strong>待研究与验证</strong><span>${opportunities.length}</span><span class="right">用户维护 · 不自动生成路线图</span></div>
+    ${body}
+    <div class="footnote">这里保存的是你决定继续验证的产品问题，不是雷达自动生成的需求结论，也不会改动任何项目的版本计划。</div>`;
+}
+function render() {
+  setTheme(state.theme);
+  setWidth(state.width);
+  renderTabs();
+  renderStatus();
+  if (state.view === "inbox") renderInbox();
+  else if (state.view === "sources") renderSources();
+  else renderOpps();
+}
+function setView(view) { state.view = view; state.detailId = null; render(); $("main").scrollTop = 0; }
+function openChange(id) { state.view = "inbox"; state.detailId = id; render(); $("main").scrollTop = 0; }
+function openSourceModal(id, preset) {
+  state.editingSourceId = id || null;
+  const form = $("sourceForm");
+  form.reset();
+  const src = id ? sourceOf(id) : null;
+  $("modalTitle").textContent = src ? "编辑关注源" : "添加关注源";
+  form.elements.name.value = src ? src.name : (preset ? preset.name : "");
+  form.elements.type.value = src ? src.type : (preset ? preset.type : "github_releases");
+  form.elements.url.value = src ? src.url : (preset ? preset.url : "");
+  $("modalBackdrop").hidden = false;
+  form.elements.name.focus();
+}
+function closeSourceModal() { $("modalBackdrop").hidden = true; state.editingSourceId = null; }
+function saveSource(form) {
+  const name = form.elements.name.value.trim();
+  const url = form.elements.url.value.trim();
+  const type = form.elements.type.value;
+  let parsed;
+  try { parsed = new URL(url); } catch (e) { showToast("请输入有效的来源 URL"); return; }
+  if (!/^https?:$/.test(parsed.protocol)) { showToast("来源必须使用 HTTP 或 HTTPS"); return; }
+  if (parsed.username || parsed.password) { showToast("来源 URL 不应包含用户名或密码"); return; }
+  if (state.editingSourceId) {
+    Object.assign(sourceOf(state.editingSourceId), { name, url, type });
+  } else {
+    sources.unshift({ id: `s${Date.now()}`, name, url, type, enabled: true, lastOkAt: "尚未检查", status: "unknown", controlled: type !== "html_static" });
+  }
+  closeSourceModal();
+  render();
+  showToast(`${DEMO}来源已写入当前页面的内存列表。原型不访问网络，也未写入任何持久化数据。`);
+}
+function addOpportunity(c) {
+  if (c.opportunityId && opportunityOf(c.opportunityId)) { setView("opps"); return; }
+  const id = `o${Date.now()}`;
+  opportunities.unshift({
+    id, title: c.title.replace(/^示例：/, "待验证："), changeId: c.id, project: "待关联项目",
+    note: "", question: "需要核实哪些事实？", nextAction: "回到原始来源核实，并比较其他实现。", status: "research"
+  });
+  c.opportunityId = id;
+  c.status = "opp";
+  setView("opps");
+  showToast(`${DEMO}机会只存在于当前页面内存。原型不写入任何持久化数据，刷新页面即丢失。`);
+}
+function updateSearch(value) {
+  state.query = value;
+  const input = $("changeSearch");
+  const pos = input ? input.selectionStart : value.length;
+  renderInbox();
+  const next = $("changeSearch");
+  if (next) {
+    next.focus();
+    try { next.setSelectionRange(pos, pos); } catch (e) { /* 某些输入类型不支持 setSelectionRange */ }
+  }
+}
+
+$("navTabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-view]");
+  if (b) setView(b.dataset.view);
+});
+$("main").addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+  const id = el.dataset.id;
+  if (action === "open-change") { openChange(id); return; }
+  if (action === "back-inbox" || action === "go-inbox") { setView("inbox"); return; }
+  if (action === "go-sources") { setView("sources"); return; }
+  if (action === "go-opps") { setView("opps"); return; }
+  if (action === "filter-status") { state.filterStatus = el.dataset.value; renderInbox(); return; }
+  if (action === "make-opp") { const c = changeOf(state.detailId); if (c) addOpportunity(c); return; }
+  if (action === "save-note") {
+    const c = changeOf(state.detailId);
+    if (!c) return;
+    c.note = $("detailNote").value;
+    $("noteSaveStatus").textContent = "仅存在于页面内存 · 未持久化";
+    showToast(`${DEMO}备注只写进当前页面内存。原型没有持久化确认，因此不显示“已保存”。`);
+    return;
+  }
+  if (action === "test-source") {
+    showToast(`${DEMO}未发起真实网络请求，因此无法判断该来源是否可访问或可解析。`);
+    return;
+  }
+  if (action === "toggle-source") {
+    const s = sourceOf(id);
+    if (!s) return;
+    s.enabled = !s.enabled;
+    render();
+    showToast(`${DEMO}来源在页面内存中已${s.enabled ? "启用" : "停用"}，未同步到任何持久化存储。`);
+    return;
+  }
+  if (action === "edit-source") { openSourceModal(id, null); return; }
+  if (action === "add-source") { openSourceModal(null, null); return; }
+  if (action === "remove-source") {
+    const s = sourceOf(id);
+    if (!s) return;
+    if (window.confirm(`从演示列表移除“${s.name}”？这不会访问网络，也不会删除任何真实数据。`)) {
+      const i = sources.findIndex(x => x.id === id);
+      if (i >= 0) sources.splice(i, 1);
+      render();
+      showToast(`${DEMO}已从页面内存列表移除，未删除任何持久化数据。`);
+    }
+    return;
+  }
+  if (action === "opp-status") {
+    const o = opportunityOf(id);
+    if (o) { o.status = el.value || el.dataset.value; renderOpps(); showToast(`${DEMO}机会状态只改在页面内存中。`); }
+    return;
+  }
+  if (action === "edit-opp") {
+    const o = opportunityOf(id);
+    if (!o) return;
+    const title = window.prompt("机会标题", o.title);
+    if (title === null) return;
+    const question = window.prompt("待验证的问题", o.question);
+    if (question === null) return;
+    o.title = title.trim() || o.title;
+    o.question = question.trim();
+    renderOpps();
+    showToast(`${DEMO}机会记录只改在页面内存中，未持久化。`);
+    return;
+  }
+});
+$("main").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".row[role='button']")) {
+    e.preventDefault();
+    openChange(e.target.dataset.id);
+  }
+});
+$("main").addEventListener("input", e => {
+  if (e.target.id === "changeSearch") updateSearch(e.target.value);
+});
+$("main").addEventListener("change", e => {
+  if (e.target.id === "sourceTypeFilter") { state.filterType = e.target.value; renderInbox(); }
+  if (e.target.id === "changeSort") { state.sort = e.target.value; renderInbox(); }
+  if (e.target.id === "detailStatus") {
+    const c = changeOf(state.detailId);
+    if (c) { c.status = e.target.value; renderDetail(); renderStatus(); }
+  }
+  if (e.target.matches("[data-action='opp-status']")) {
+    const o = opportunityOf(e.target.dataset.id);
+    if (o) { o.status = e.target.value; renderOpps(); showToast(`${DEMO}机会状态只改在页面内存中。`); }
+  }
+});
+$("refreshBtn").addEventListener("click", () => {
+  if (state.refreshing) return;
+  state.refreshing = true;
+  const previous = state.preview;
+  state.preview = "loading";
+  render();
+  setTimeout(() => {
+    state.refreshing = false;
+    if (state.preview === "loading") state.preview = previous === "loading" ? "normal" : previous;
+    state.lastRefresh = "刚刚（演示）";
+    render();
+    showToast(`${DEMO}未连接任何真实来源，没有获取、也没有写入任何数据。`);
+  }, 900);
+});
+$("sourceStatus").addEventListener("click", () => setView("sources"));
+document.querySelectorAll("[data-theme]").forEach(el => el.addEventListener("click", () => setTheme(el.dataset.theme)));
+document.querySelectorAll("[data-width]").forEach(el => el.addEventListener("click", () => setWidth(el.dataset.width)));
+document.querySelectorAll("[data-preview]").forEach(el => el.addEventListener("click", () => setPreview(el.dataset.preview)));
+$("sourceForm").addEventListener("submit", e => { e.preventDefault(); saveSource(e.currentTarget); });
+$("closeModal").addEventListener("click", closeSourceModal);
+$("cancelModal").addEventListener("click", closeSourceModal);
+$("modalBackdrop").addEventListener("click", e => { if (e.target === $("modalBackdrop")) closeSourceModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("modalBackdrop").hidden) closeSourceModal(); });
+
+render();
+</script>
+</body>
+</html>

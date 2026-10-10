@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title>AI 产品观察 · Atom 1.0</title>
+  <subtitle>每天一条值得关注的 AI 产品变化</subtitle>
+  <link rel="self" href="https://example.org/atom.xml"/>
+  <link rel="alternate" type="text/html" href="https://example.org/"/>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+  <updated>2008-06-03T11:05:30Z</updated>
+  <entry>
+    <title>某模型把长上下文价格下调 40%</title>
+    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+    <link rel="alternate" type="text/html" href="https://example.org/posts/long-context-price"/>
+    <updated>2008-06-03T11:05:30.123+02:00</updated>
+    <dc:date>2008-06-03T11:05:30Z</dc:date>
+    <summary>价格下调与配额调整的简要说明。</summary>
+    <content type="html">&lt;p&gt;新的计价单位是「每百万 token」，并且&lt;strong&gt;不再区分输入输出&lt;/strong&gt;。&lt;/p&gt;</content>
+  </entry>
+</feed>

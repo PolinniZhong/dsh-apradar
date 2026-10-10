@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>标签没闭合的提要</title>
+    <link>https://broken.example.com/</link>
+    <item>
+      <title>这个 item 忘了闭合</title>
+      <guid>broken-0001</guid>
+    <!-- 下面这一行是故意的：channel 与 rss 都用 </channel> 关，导致不匹配 -->
+    </channel>
+  </item>
+</rss>

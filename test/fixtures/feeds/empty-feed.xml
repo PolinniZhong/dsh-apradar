@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>暂时没有条目的提要</title>
+    <link>https://empty.example.com/</link>
+    <description>合法但零条目的 RSS 2.0 提要</description>
+    <lastBuildDate>Tue, 03 Jun 2008 11:05:30 GMT</lastBuildDate>
+  </channel>
+</rss>

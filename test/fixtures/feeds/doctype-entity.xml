@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rss [
+  <!ENTITY xxe "PWNED">
+  <!ENTITY external SYSTEM "file:///etc/passwd">
+]>
+<!-- 目的：本解析器必须不展开 &xxe;，也绝不能去读 SYSTEM 指向的任何东西 -->
+<rss version="2.0">
+  <channel>
+    <title>&xxe; 不应被展开</title>
+    <link>https://xxe.example.com/</link>
+    <item>
+      <title>实体注入测试</title>
+      <guid>xxe-0001</guid>
+      <description>&xxe; 与 &external; 都应当原样保留为文本。</description>
+    </item>
+  </channel>
+</rss>
