@@ -23,8 +23,8 @@
 ```
 ┌──────────────────────────── DSH 右侧栏（浏览器渲染进程） ────────────────────────────┐
 │ Client 插件（单文件 bundle，无构建步）                                                │
-│  · 三个页签注册（sidebar.right.pane.tab 正文席位 × 3）                                │
-│  · 一个页签一个视图 + 自己的详情态；跨视图跳转 = 打开另一个页签                       │
+│  · 一个页签注册（sidebar.right.pane.tab 正文席位）                                    │
+│  · 三个视图 + 详情态（插件自己的分段控件切换，不用 DSH 页签/工具栏席位）                 │
 │  · 只调用同源 /apradar/* 接口；不直接访问外网、不碰文件系统、不碰持久化                  │
 └───────────────────────────────────┬─────────────────────────────────────────────────┘
                                     │ HTTP（同源 JSON）/ 或 typert RPC（P1 候选）
@@ -54,13 +54,13 @@
 | **唯一出网口** | 所有外网请求集中在 `fetch/gateway.ts`，只调用 `ctx.web.fetch()` |
 | **事实与推测在数据层就分离** | 事实字段来自抓取与差异结果；推测字段是独立 record 字段，物理上不同字段 |
 | **一切有界** | 网络、解析、存储、列表、差异条目全部有显式上限常量 |
-| **三页签并列** | 右栏注册三个页签（变化 / 关注源 / 机会池）；一个页签 = 一个视图，详情在该页签内部打开 |
+| **单入口** | 右栏只注册一个页签；三个视图是内部路由 |
 
 ### 1.3 与 DSH 的耦合点（全部为公开接口）
 
 | 耦合点 | 接口 | 状态 |
 |---|---|---|
-| 右栏页签注册 | `ctx.sidebarRightTabs.register({id, kind, priority, title, guide})`，**每个页签各注册一次**（`id` 必须全局唯一，`kind` 决定 `openTab()` 的去重） | `[已核实]` |
+| 右栏页签注册 | `ctx.sidebarRightTabs.register({id, kind, priority, title, guide})` | `[已核实]` |
 | 页签正文 | `ctx.slots.register({name:'sidebar.right.pane.tab', key:id}, Body)` + `useTabInfo()` | `[已核实]` |
 | 打开发送 | `ctx.sidebarRight.openTab(kind)` | `[已核实]`（Knit 实现在用） |
 | 持久化 | `ctx.storageDomain.open(spec)` → `Domain.table().get/entries/keys/put/delete/update/size` | `[已核实]` §5 |
@@ -90,13 +90,13 @@
 ### 2.2 Client
 
 **职责**
-1. 注册三个右栏页签（`变化` / `关注源` / `机会池`）各自的正文与标题席位。
-2. 每个页签渲染自己那**一个**视图 + 详情态，以及空/加载/失败/持久化状态。
+1. 注册唯一右栏页签与正文组件。
+2. 渲染三视图 + 详情态、分段控件、空/加载/失败/持久化状态。
 3. 搜索、筛选、排序、导航、标记、备注、机会编辑的前端交互（过滤在有界数据上进行）。
 4. 调用 Host 的 `/apradar/*` 接口并展示结果。
 
 **面板里不重复产品名**（2026-10-09 按使用者要求改定）
-产品名只在**右栏页签 chip**（`PANE_TITLES`）与**新建页签的引导卡片**（`tabs.register` 的 `guide`）上，正文里不再重复一遍标题 + 副标题。0.1.1 起页内的分段控件也去掉了（一个页签只有一个视图），所以 `div.apr-body` 直接就是面板正文的第一块。**别"顺手"把标题加回来**；`test/client.test.mjs` 有一条断言钉着"面板正文里不该出现产品名"。
+右栏的页签 chip（`RadarTitle`）上已经写着「AI 产品雷达」，正文里再放一遍标题 + 副标题既重复又白占一行高度。所以 `.apr-head` 整块已删除，`修改` `关注源` `机会池` 的视图页签栏就是面板的第一行（实测距面板顶部 0px）。**别"顺手"把标题加回来** —— 名字只有一处，就在页签上；`test/client.test.mjs` 有一条断言钉着"面板正文里不该出现产品名"。
 
 **明确不做**（硬约束）
 - ❌ 不直接访问任意外部网站（无 `fetch(外部URL)`、无 `<img src=外部>`）
@@ -779,7 +779,7 @@ JSON 后端把每个 domain 落成 `$DSH_HOME/storages/` 下的目录，**没有
 > **✅ 闸门已通过（2026-10-09）——本节方案维持不变**
 >
 > V1 / T17 / T17b 已在 Milestone 0 与 Milestone 1 两轮实测中结清：
-> 1. 右侧栏页签注册成功（Desktop 与隔离 Web Profile 均报 `官方右侧栏页签已注册：kind = apradar`；0.1.1 起一次打印三个 kind）；
+> 1. 右侧栏页签注册成功（Desktop 与隔离 Web Profile 均报 `官方右侧栏页签已注册：kind = apradar`）；
 > 2. Client → Host 的同源请求可达（真实桌面宿主渲染进程内 `/apradar/state` → `200`，面板渲染出 Host 原始 JSON）；
 > 3. Host 正常响应被正确解析；
 > 4. **异常态**（500 错误码 / 200 非 JSON / 200 空体 / 404 / 超时）五项判定全为 true，界面不崩溃（`pageErrors: []`）。
@@ -855,66 +855,40 @@ JSON 后端把每个 domain 落成 `$DSH_HOME/storages/` 下的目录，**没有
 
 ---
 
-### 6.4 客户端导航状态机：一个页签 = 一个视图（0.1.1 三页签，2026-10-10）
+### 6.4 客户端导航状态机：列表 ↔ 详情态（P0 详情页补齐，2026-10-10）
 
-三个视图各自是**一个独立的右栏页签**：`变化`（`apradar:inbox`）、`关注源`（`apradar:sources`）、
-`机会池`（`apradar:opps`）。三个页签的正文都是同一个组件 `RadarPane({ paneKey, useTabInfo })`，
-`paneKey` 决定它承载哪个视图 —— 三个组件一模一样，只有常量不同。
-
-**没有"当前视图"、也没有来路栈**：每个页签只有一个视图，页签之间靠 DSH 自己的页签机制并排。
-跨视图跳转（变化详情里的「打开机会详情 ›」）调用
-`tab.actions.openTab(kind, { params: { detailId }, revealIfOpened: true })` 打开**另一个页签**，
-并把那条记录的 id 带过去；对面的页签在 `navigation.params.detailId` 上收到它，按
-`navigation.revision` 应用一次（`revision` 每被导航一次就 +1，params 没变也 +1 —— 只盯 params
-的话"重复指到同一条详情"会没反应）。
+三个视图（变化 / 关注源 / 机会池）共用**一个**导航状态，全部由右栏内的 `RadarBody`
+持有 —— **不新增 DSH 侧栏页签**，详情在面板内部打开。
 
 ```js
-// 每个页签各持一片状态，只装自己的那一个视图
-slice = { status, query, offset, detailId, scrollTop, loadedAt }   // inbox / opps
-slice = { detailId, scrollTop, loadedAt }                          // sources
-```
-
-**列表的筛选/搜索/分页状态属于 `slice`，不属于视图组件。** 三个视图因此依旧是**受控**的：
-读写走 `slice` 与 `patchSlice(key, patch)`；`patchSlice` **忽略 `key` 参数**（每个页签只有一片
-状态，`key` 是 0.1.0 的遗留签名 —— 留着它就不必动三个视图的签名，那是刻意的最小改动）。
-
-四条不变量：
-
-1. **`openDetail(key, id)` 要把"跨视图"翻译成打开另一个页签**：`key` 就是本页签的视图 →
-   就地 `setSlice({ detailId })`；否则 → `actions.openTab(PANE_BY_KEY[key].kind, {params:{detailId}, revealIfOpened:true})`。
-   **本页签的内容不许被替掉** —— 这正是改成三页签要换来的东西。
-2. **进详情前先记住列表的滚动位置**，而且只在"从列表进详情"时记（`prev.detailId === null`）：
-   详情之间互相跳不该把列表的位置覆盖成详情自己的位置。**0.1.1 开发时踩过这个坑**：
-   重写 `openDetail` 时漏了存 `scrollTop` 这一步，两条"返回后恢复滚动位置"的测试立刻变红
-   （`0 !== 320` / `0 !== 111`），才发现那一步原本就写在 `openDetail` 里、不在视图里。
-3. **滚动位置恢复只能恢复一次**（`restoredRef`，键为 `` `${paneKey}|${detailId}` ``），否则会一直
-   和用户的滚动打架；而且要等列表数据回来（`loadedAt` 由 `load()` 成功时打点）再写 `scrollTop`
-   —— 太早写会被随后撑开的内容重置掉。进入详情时 `scrollTop` 归零。
-4. **详情不能是死胡同**：读取中、读取失败、记录不存在三种状态下都要有返回入口
-   （`ChangeDetail` 的 `.apr-crumb` 在三个分支里都渲染）。返回按钮回到的是**本页签的列表** ——
-   跨页签没有来路栈可弹（见 [PRD.md](PRD.md) §5.2）。
-
-**三个页签的注册形状**（`test/client.test.mjs` 有一条专门的测试钉着它）：
-
-```js
-for (const pane of PANES) {              // PANES 是模块级常量，三页签一次循环注册
-  tabs.register({ id: pane.id, kind: pane.kind, priority: 'extension',
-                  title: PANE_TITLES[pane.key],
-                  guide: [{ order: pane.order, title: () => `AI 产品雷达 · ${pane.label}`, description: () => pane.hint, icon: RadarGlyph }] })
-  slots.register({ name: 'sidebar.right.pane.tab',       key: pane.id }, PANE_BODIES[pane.key])
-  slots.register({ name: 'sidebar.right.pane.tab.title', key: pane.id }, PANE_TITLES[pane.key])
+nav = {
+  view: 'inbox' | 'sources' | 'opps',
+  stack: [...],                     // 来路：从哪里跳出去的
+  inbox:  { status, query, offset, detailId, scrollTop, loadedAt },
+  sources:{ detailId, scrollTop, loadedAt },
+  opps:   { status, query, offset, detailId, scrollTop, loadedAt },
 }
 ```
 
-三个容易踩的坑：① `id` 必须全局唯一 —— 重复会在 `register` 时**直接 throw**；
-② `kind` 三段互不相同，否则 `openTab()` 会把三个页签当成同一个（页签类型按 `kind` 去重）；
-③ 正文 / 标题席位的 `key` 必须是**该页签自己的 `id`** —— 写错**不会报任何错**，页签会打开成
-一片空白。另外 `PANE_BODIES` 必须是模块级常量：在 `apply()` 里现造箭头函数会让每次重注册都换
-引用，React 会把面板整块卸载重挂，页签里的筛选与滚动位置全丢。
+**列表的筛选/搜索/分页状态属于 `nav`，不属于视图组件。** 视图组件卸载后这些状态必须还在
+（`test/client-harness.mjs` 的替身按树的路径保存 Hook 槽位，所以"切走再切回"能不能保住
+状态是可测的）。三个视图因此都是**受控**的：读写走 `slice` 与 `patchSlice(key, patch)`。
 
-**没有 `tab.actions` 时的兜底**（离线渲染、单元测试）：`openDetail` 退化成**就地打开**另一个视图
-的详情（`fallback` 状态），返回回到本页签自己的列表；真实右栏里 `fallback` 恒为 `null`。
-理由：点了没反应比少跳一次页签更糟。
+四条不变量：
+
+1. **`openDetail(key, id)` 必须一次写对三样东西**：`view`、`stack` 追加来路、来路的
+   `scrollTop`。同视图内打开详情时 `key === from`，两个字段会落在同一个键上 ——
+   必须先把 `next` 建好，再分别基于 `next[from]` 与 `next[key]` 展开。
+   **早先的实现正是踩了这个坑**：后写的计算属性覆盖了先写的，`scrollTop` 被丢弃，
+   "返回后恢复滚动位置"永远是 0。
+2. **`back()` 先弹栈**：栈顶是**另一个**视图时回到那个视图**并保留它当时的 `detailId`**
+   （用户是从那条变化跳到机会的，返回就该回到那条变化）；栈空或栈顶就是本视图时才只关掉
+   本视图的详情。点页签直接切视图（`switchView`）**清空来路栈** —— 那不是一次"跳出去"。
+3. **滚动位置恢复只能恢复一次**（`restoredRef`），否则会一直和用户的滚动打架；
+   而且要等列表数据回来（`loadedAt` 由 `load()` 成功时打点）再写 `scrollTop` ——
+   太早写会被随后撑开的内容重置掉。进入详情时 `scrollTop` 归零。
+4. **详情不能是死胡同**：读取中、读取失败、记录不存在三种状态下都要有返回入口
+   （`ChangeDetail` 的 `.apr-crumb` 在三个分支里都渲染）。
 
 **为什么详情要独立读一次，而不是从列表里找**：从一条变化跳到机会时，那条机会可能不在当前页
 （列表有分页与状态筛选），刷新页面后也要能按 id 恢复。所以 `GET /opportunities/:id` 是必需的，

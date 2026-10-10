@@ -209,7 +209,7 @@ function makeClient(overrides = {}) {
   })
 }
 
-/** 面板正文那个滚动容器（`RadarPane` 里唯一的滚动宿主）。 */
+/** 面板正文那个滚动容器（`RadarBody` 里唯一的滚动宿主）。 */
 function findBody(renderer, tree) {
   return renderer.find(tree, (node) => node.props?.className === 'apr-body')
 }
@@ -236,9 +236,9 @@ async function render(client, Component, props = {}) {
 test('① 变化列表 → 详情 → 返回：详情在页面内部打开，返回后滚动位置与列表状态都还在', async () => {
   const client = makeClient()
   try {
-    const { PANE_BODIES } = client.exported.__test
+    const { RadarBody } = client.exported.__test
     const R = client.renderer
-    let tree = await render(client, PANE_BODIES.inbox)
+    let tree = await render(client, RadarBody)
     let text = R.textOf(tree)
 
     assert.ok(text.includes('本次显示第'), `列表要有分页与计数，实际渲染出：${text.slice(0, 240)}`)
@@ -253,7 +253,7 @@ test('① 变化列表 → 详情 → 返回：详情在页面内部打开，返
     assert.equal(row.tag, 'button', '行必须是真正的 <button>，否则键盘用户按不到它')
     assert.match(row.props['aria-label'] ?? '', /打开变化详情/, '行必须有可读的无障碍名字')
     row.props.onClick()
-    tree = await render(client, PANE_BODIES.inbox)
+    tree = await render(client, RadarBody)
     text = R.textOf(tree)
 
     assert.ok(
@@ -265,7 +265,7 @@ test('① 变化列表 → 详情 → 返回：详情在页面内部打开，返
     assert.equal(findBody(R, tree).element.scrollTop, 0, '详情应该从顶部开始，而不是继承列表的滚动位置')
 
     click(R, tree, (_node, t) => t === '‹ 返回变化列表')
-    tree = await render(client, PANE_BODIES.inbox)
+    tree = await render(client, RadarBody)
     text = R.textOf(tree)
 
     assert.ok(text.includes('本次显示第'), '返回后必须回到列表')
@@ -278,10 +278,8 @@ test('① 变化列表 → 详情 → 返回：详情在页面内部打开，返
 // ------------------------------------------------- ② 读不出来 / 不存在
 
 test('② 详情服务报错、记录不存在、没有关联快照：三种都不是死胡同', async () => {
-  // `loadClient()` 的返回值上没有 `__test`（它挂在导出的模块上），这里只是留个记号：
-  // 真正的断言都在下面各自的客户端实例上。
-  const placeholder = makeClient().__test ?? {}
-  assert.equal(placeholder.PANE_BODIES, undefined, '占位：真正的断言在下面各自的客户端实例上')
+  const { RadarBody, ChangeDetail } = makeClient().__test ?? {}
+  assert.equal(RadarBody, undefined, '占位：真正的断言在下面各自的客户端实例上')
 
   // (a) 服务端报错 —— 必须原样转述原因，并且仍然给得出返回与重试。
   const failing = makeClient({
@@ -289,9 +287,9 @@ test('② 详情服务报错、记录不存在、没有关联快照：三种都�
   })
   try {
     const R = failing.renderer
-    let tree = await render(failing, failing.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(failing, failing.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(failing, failing.exported.__test.PANE_BODIES.inbox)
+    tree = await render(failing, failing.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /这条变化读不出来/, '必须明确说读不出来')
@@ -309,9 +307,9 @@ test('② 详情服务报错、记录不存在、没有关联快照：三种都�
   })
   try {
     const R = missing.renderer
-    let tree = await render(missing, missing.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(missing, missing.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(missing, missing.exported.__test.PANE_BODIES.inbox)
+    tree = await render(missing, missing.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /没有这条变化/, '记录不存在时要说清是哪条不存在')
@@ -420,17 +418,17 @@ test('④ 改状态与备注：只有服务端确认成功才显示已保存，�
   const ok = makeClient()
   try {
     const R = ok.renderer
-    let tree = await render(ok, ok.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(ok, ok.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(ok, ok.exported.__test.PANE_BODIES.inbox)
+    tree = await render(ok, ok.exported.__test.RadarBody)
 
     const noteBox = R.find(tree, (node) => node.tag === 'textarea')
     assert.ok(noteBox, '详情必须有备注输入框')
     noteBox.props.onChange({ target: { value: '这条和我们的 SDK 路线有关' } })
-    tree = await render(ok, ok.exported.__test.PANE_BODIES.inbox)
+    tree = await render(ok, ok.exported.__test.RadarBody)
 
     click(R, tree, (_node, t) => t === '保存备注')
-    tree = await render(ok, ok.exported.__test.PANE_BODIES.inbox)
+    tree = await render(ok, ok.exported.__test.RadarBody)
 
     const patched = ok.requests.filter((r) => r.method === 'PATCH' && r.path === `${ROUTE_PREFIX}/changes/chg_1`)
     assert.equal(patched.length, 1, '必须真的发一次 PATCH')
@@ -439,7 +437,7 @@ test('④ 改状态与备注：只有服务端确认成功才显示已保存，�
 
     // 状态修改走同一个端点。
     click(R, tree, (_node, t) => t === '忽略')
-    tree = await render(ok, ok.exported.__test.PANE_BODIES.inbox)
+    tree = await render(ok, ok.exported.__test.RadarBody)
     const statusPatch = ok.requests.filter((r) => r.method === 'PATCH' && r.body?.status === 'ignored')
     assert.equal(statusPatch.length, 1, '点「忽略」必须发 status=ignored')
   } finally {
@@ -452,14 +450,14 @@ test('④ 改状态与备注：只有服务端确认成功才显示已保存，�
   })
   try {
     const R = bad.renderer
-    let tree = await render(bad, bad.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(bad, bad.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(bad, bad.exported.__test.PANE_BODIES.inbox)
+    tree = await render(bad, bad.exported.__test.RadarBody)
 
     R.find(tree, (node) => node.tag === 'textarea').props.onChange({ target: { value: '用户辛苦写的一段判断' } })
-    tree = await render(bad, bad.exported.__test.PANE_BODIES.inbox)
+    tree = await render(bad, bad.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t === '保存备注')
-    tree = await render(bad, bad.exported.__test.PANE_BODIES.inbox)
+    tree = await render(bad, bad.exported.__test.RadarBody)
 
     const text = R.textOf(tree)
     assert.match(text, /保存失败/, '失败必须说出来')
@@ -492,11 +490,12 @@ test('⑤ 来源详情：状态、失败原因与快照历史都在，读取失�
   })
   try {
     const R = partial.renderer
-    // 「关注源」现在是自己一个右栏页签，不再是页内分段控件：直接挂载那个页签的正文。
-    let tree = await render(partial, partial.exported.__test.PANE_BODIES.sources)
+    let tree = await render(partial, partial.exported.__test.RadarBody)
+    click(R, tree, (_node, t) => t === '关注源')
+    tree = await render(partial, partial.exported.__test.RadarBody)
 
     click(R, tree, (_node, t) => t.includes('某来源'))
-    tree = await render(partial, partial.exported.__test.PANE_BODIES.sources)
+    tree = await render(partial, partial.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.ok(
@@ -521,9 +520,11 @@ test('⑤ 来源详情：状态、失败原因与快照历史都在，读取失�
   })
   try {
     const R = broken.renderer
-    let tree = await render(broken, broken.exported.__test.PANE_BODIES.sources)
+    let tree = await render(broken, broken.exported.__test.RadarBody)
+    click(R, tree, (_node, t) => t === '关注源')
+    tree = await render(broken, broken.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('某来源'))
-    tree = await render(broken, broken.exported.__test.PANE_BODIES.sources)
+    tree = await render(broken, broken.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /快照历史读取失败/, '读取失败要说"读取失败"')
@@ -544,10 +545,12 @@ test('⑥ 机会详情：编辑保存失败时保留输入并显示原因，删�
   })
   try {
     const R = failingSave.renderer
-    let tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    let tree = await render(failingSave, failingSave.exported.__test.RadarBody)
+    click(R, tree, (_node, t) => t === '机会池')
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
 
     click(R, tree, (_node, t) => t.includes('示例机会'))
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
     assert.ok(
       failingSave.requests.some((r) => r.path === `${ROUTE_PREFIX}/opportunities/opp_1`),
       '机会详情必须独立读取，不能靠列表里那一行凑',
@@ -555,15 +558,15 @@ test('⑥ 机会详情：编辑保存失败时保留输入并显示原因，删�
     assert.match(R.textOf(tree), /‹ 返回机会池/)
 
     click(R, tree, (_node, t) => t === '编辑判断与问题')
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
 
     const judgment = R.find(tree, (node) => node.tag === 'textarea')
     assert.ok(judgment, '编辑表单要有判断输入框')
     judgment.props.onChange({ target: { value: '我自己写的判断，绝不能被清空' } })
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
 
     click(R, tree, (_node, t) => t === '保存')
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
     let text = R.textOf(tree)
 
     assert.match(text, /保存失败/, '保存失败必须显示出来')
@@ -577,9 +580,9 @@ test('⑥ 机会详情：编辑保存失败时保留输入并显示原因，删�
 
     // 删除失败：必须留在详情页，且如实转述后端结果。
     click(R, tree, (_node, t) => t === '删除')
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t === '确认删除')
-    tree = await render(failingSave, failingSave.exported.__test.PANE_BODIES.opps)
+    tree = await render(failingSave, failingSave.exported.__test.RadarBody)
     text = R.textOf(tree)
 
     assert.match(text, /删除失败/, '删除失败必须说出来')
@@ -592,7 +595,7 @@ test('⑥ 机会详情：编辑保存失败时保留输入并显示原因，删�
 
 // ------------------------------------------------- ⑦ 双向跳转
 
-test('⑦ 变化 ↔ 机会双向跳转：跨视图开的是另一个右栏页签，并用真实 id 定位到那一条', async () => {
+test('⑦ 变化 ↔ 机会双向跳转：必须用真实 id，返回要回到跳出来的那一页', async () => {
   const client = makeClient({
     [`GET ${ROUTE_PREFIX}/changes/chg_1`]: () => ({
       ok: true,
@@ -606,61 +609,38 @@ test('⑦ 变化 ↔ 机会双向跳转：跨视图开的是另一个右栏页�
   })
   try {
     const R = client.renderer
-    const opened = []
-    /*
-     * 右栏席位注入的 hook 是按名字变成 props 的，所以这里直接把 `useTabInfo` 当 prop
-     * 传进去。fake 出来的 `tab` 只要满足 `navigation` + `actions` 两件事。
-     */
-    const inboxTab = () => ({
-      tab: { navigation: { params: {}, revision: 1 }, actions: { openTab: (kind, options) => opened.push({ kind, options }) } },
-    })
-    let tree = await render(client, client.exported.__test.PANE_BODIES.inbox, { useTabInfo: inboxTab })
+    let tree = await render(client, client.exported.__test.RadarBody)
 
-    // 变化详情 → 打开「机会池」页签，并把那一条机会的 id 带过去。
+    // 变化详情 → 机会详情
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox, { useTabInfo: inboxTab })
+    tree = await render(client, client.exported.__test.RadarBody)
     assert.ok(R.textOf(tree).includes('已关联机会 opp_1'), '有关联时要把关联对象显示出来')
 
     click(R, tree, (_node, t) => t === '打开机会详情 ›')
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox, { useTabInfo: inboxTab })
-    assert.deepEqual(
-      opened,
-      [{ kind: 'apradar:opps', options: { params: { detailId: 'opp_1' }, revealIfOpened: true } }],
-      '跨视图必须去打开机会池页签并带上真实 id —— 只切自己这块视图的话，用户就没法两边对着看',
-    )
-    assert.match(R.textOf(tree), /已关联机会 opp_1/, '打开另一个页签不该把本页签的内容替换掉')
-
-    // 被指过来的机会池页签：按 params 直接落在那条机会的详情上。
-    R.reset()
-    const oppsTab = () => ({
-      tab: { navigation: { params: { detailId: 'opp_1' }, revision: 4 }, actions: { openTab: () => {} } },
-    })
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps, { useTabInfo: oppsTab })
+    tree = await render(client, client.exported.__test.RadarBody)
     assert.ok(
       client.requests.some((r) => r.path === `${ROUTE_PREFIX}/opportunities/opp_1`),
-      '被指过来的页签必须按 params 去读那条机会，而不是停在机会池列表',
+      '必须按真实 id 打开那条机会',
     )
-    assert.match(R.textOf(tree), /关联的来源变化/, '要真的落在机会详情上')
+    assert.match(R.textOf(tree), /关联的来源变化/)
 
-    // 「返回」回到的是本页签自己的列表 —— 跨页签没有来路栈，这是 0.1.1 与 0.1.0 的差别。
+    // 跨视图返回：应该回到「变化详情」这一页，而不是变化列表的开头。
     click(R, tree, (_node, t) => t === '‹ 返回机会池')
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps, { useTabInfo: oppsTab })
-    assert.match(R.textOf(tree), /示例机会/, '返回要回到机会池列表')
+    tree = await render(client, client.exported.__test.RadarBody)
+    let text = R.textOf(tree)
+    assert.match(text, /‹ 返回变化列表/, '跨视图返回必须回到跳出来的那一页')
+    assert.match(text, /已关联机会 opp_1/, '回来时应该还是那条变化的详情')
 
-    // 反方向：机会详情 →「打开变化详情 ›」→ 打开「变化」页签。
-    R.reset()
-    const backToChange = []
-    const oppsDir = () => ({
-      tab: { navigation: { params: {}, revision: 1 }, actions: { openTab: (kind, options) => backToChange.push({ kind, options }) } },
-    })
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps, { useTabInfo: oppsDir })
-    click(R, tree, (_node, t) => t.includes('示例机会'))
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps, { useTabInfo: oppsDir })
+    // 机会详情 → 变化详情
+    click(R, tree, (_node, t) => t === '打开机会详情 ›')
+    tree = await render(client, client.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t === '打开变化详情 ›')
-    assert.deepEqual(
-      backToChange,
-      [{ kind: 'apradar:inbox', options: { params: { detailId: 'chg_1' }, revealIfOpened: true } }],
-      '反方向必须打开「变化」页签，并用真实的变化 id',
+    tree = await render(client, client.exported.__test.RadarBody)
+    text = R.textOf(tree)
+    assert.match(text, /‹ 返回变化列表/, '从机会点回变化，应该落在变化详情上')
+    assert.ok(
+      client.requests.filter((r) => r.path === `${ROUTE_PREFIX}/changes/chg_1`).length >= 2,
+      '跳回变化详情要真的再读一次那条变化',
     )
   } finally {
     client.restore()
@@ -679,9 +659,11 @@ test('⑧ 关联的变化已被清理：如实说明，不渲染空链接、也�
   })
   try {
     const R = orphan.renderer
-    let tree = await render(orphan, orphan.exported.__test.PANE_BODIES.opps)
+    let tree = await render(orphan, orphan.exported.__test.RadarBody)
+    click(R, tree, (_node, t) => t === '机会池')
+    tree = await render(orphan, orphan.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例机会'))
-    tree = await render(orphan, orphan.exported.__test.PANE_BODIES.opps)
+    tree = await render(orphan, orphan.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /已经不在了/, '关联对象消失时必须明说')
@@ -700,10 +682,12 @@ test('⑧ 关联的变化已被清理：如实说明，不渲染空链接、也�
   })
   try {
     const R = manual.renderer
-    let tree = await render(manual, manual.exported.__test.PANE_BODIES.opps)
+    let tree = await render(manual, manual.exported.__test.RadarBody)
+    click(R, tree, (_node, t) => t === '机会池')
+    tree = await render(manual, manual.exported.__test.RadarBody)
     assert.match(R.textOf(tree), /没有关联任何一次抓取记录/, '列表上就要能看出来这条机会没有抓取证据')
     click(R, tree, (_node, t) => t.includes('手工建的机会'))
-    tree = await render(manual, manual.exported.__test.PANE_BODIES.opps)
+    tree = await render(manual, manual.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /没有关联任何一次抓取记录/, '详情里必须明说这条机会没有抓取证据')
@@ -727,21 +711,16 @@ test('⑧ 关联的变化已被清理：如实说明，不渲染空链接、也�
   })
   try {
     const R = gone.renderer
-    let tree = await render(gone, gone.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(gone, gone.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(gone, gone.exported.__test.PANE_BODIES.inbox)
+    tree = await render(gone, gone.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t === '打开机会详情 ›')
-    tree = await render(gone, gone.exported.__test.PANE_BODIES.inbox)
+    tree = await render(gone, gone.exported.__test.RadarBody)
     const text = R.textOf(tree)
 
     assert.match(text, /读不出来/, '打开一个已经删掉的机会要说清读不出来')
     assert.match(text, /没有这条机会/)
     assert.match(text, /‹ 返回机会池/, '读失败时也要有出口')
-
-    // 没有右栏 API 时就地打开：返回必须回到本页签自己的列表，不能卡在别人的详情里。
-    click(R, tree, (_node, t) => t === '‹ 返回机会池')
-    tree = await render(gone, gone.exported.__test.PANE_BODIES.inbox)
-    assert.match(R.textOf(tree), /本次显示第/, '就地打开的另一个视图返回后，要回到本页签自己的列表')
   } finally {
     gone.restore()
   }
@@ -763,12 +742,12 @@ test('⑨ 列表筛选、分页与滚动位置：换条件回到第一页，返�
   })
   try {
     const R = client.renderer
-    let tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(client, client.exported.__test.RadarBody)
     assert.match(R.textOf(tree), /共 45 条/)
 
     // 翻到第二页
     click(R, tree, (_node, t) => t === '下一页')
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
     const paged = client.requests.filter((r) => r.path.startsWith(`${ROUTE_PREFIX}/changes?`) && r.path.includes('offset=20'))
     assert.equal(paged.length, 1, '「下一页」必须真的按 offset=20 去取')
     assert.match(R.textOf(tree), /本次显示第 21/, '分页位置必须显示出来')
@@ -777,14 +756,14 @@ test('⑨ 列表筛选、分页与滚动位置：换条件回到第一页，返�
     const filter = byLabel(R, tree, '按处理状态筛选')
     assert.ok(filter, '筛选下拉必须有可读的无障碍名字')
     filter.props.onChange({ target: { value: 'ignored' } })
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
     const afterFilter = client.requests.filter((r) => r.path.includes('status=ignored')).at(-1)
     assert.ok(afterFilter, '改筛选必须带上新的 status')
     assert.ok(!afterFilter.path.includes('offset=20'), '换筛选条件必须回到第一页，否则用户会看到"没有结果"的假象')
 
     // 搜索词
     byLabel(R, tree, '搜索变化').props.onChange({ target: { value: '某个关键词' } })
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
     assert.ok(
       client.requests.some((r) => r.path.includes('q=') && decodeURIComponent(r.path).includes('某个关键词')),
       '搜索必须真的发给服务端',
@@ -794,20 +773,19 @@ test('⑨ 列表筛选、分页与滚动位置：换条件回到第一页，返�
     const body = findBody(R, tree)
     body.element.scrollTop = 111
     click(R, tree, (_node, t) => t.includes('第 1 条'))
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
     click(R, tree, (_node, t) => t === '‹ 返回变化列表')
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
 
     assert.equal(byLabel(R, tree, '搜索变化').props.value, '某个关键词', '返回后搜索词必须还在')
     assert.equal(byLabel(R, tree, '按处理状态筛选').props.value, 'ignored', '返回后筛选条件必须还在')
     assert.equal(findBody(R, tree).element.scrollTop, 111, '返回后滚动位置必须恢复')
 
     // 机会池的筛选同样住在 nav 里。
-    // 换页签等于换一个挂载点（真实右栏里本来就是两个根），重置渲染器实例。
-    R.reset()
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps)
+    click(R, tree, (_node, t) => t === '机会池')
+    tree = await render(client, client.exported.__test.RadarBody)
     byLabel(R, tree, '搜索机会').props.onChange({ target: { value: '机会关键词' } })
-    tree = await render(client, client.exported.__test.PANE_BODIES.opps)
+    tree = await render(client, client.exported.__test.RadarBody)
     assert.ok(
       client.requests.some((r) => r.path.startsWith(`${ROUTE_PREFIX}/opportunities?`) && decodeURIComponent(r.path).includes('机会关键词')),
       '机会池的搜索也必须真的发给服务端',
@@ -823,7 +801,7 @@ test('⑩ 键盘可达性：入口是真的 button，表单控件有标签，窄
   const client = makeClient()
   try {
     const R = client.renderer
-    let tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    let tree = await render(client, client.exported.__test.RadarBody)
 
     // 列表行：真 button + 无障碍名字。
     const row = R.findClickable(tree, (_node, t) => t.includes('示例标题'))
@@ -837,7 +815,7 @@ test('⑩ 键盘可达性：入口是真的 button，表单控件有标签，窄
 
     // 表单控件要能被打字/选择，而且有可读名字（<label> 包裹或 aria-label）。
     click(R, tree, (_node, t) => t.includes('示例标题'))
-    tree = await render(client, client.exported.__test.PANE_BODIES.inbox)
+    tree = await render(client, client.exported.__test.RadarBody)
 
     const textarea = R.find(tree, (node) => node.tag === 'textarea')
     assert.ok(textarea, '备注输入框必须在')

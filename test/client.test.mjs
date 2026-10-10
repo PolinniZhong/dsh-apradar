@@ -47,81 +47,17 @@ test('注册形态：四处注册点，且会话头部入口按钮不能把面�
     '组件必须以第 2 个位置参数传入，且 options 对象里不能再塞别的东西',
   )
 
-  // 右栏：三个页签在同一个循环里注册，正文 / 标题两个席位的 key 必须用**该页签
-  // 自己的 id** —— 写错不会报任何错，页签会打开成一片空白。
-  assert.match(SOURCE, /tabs\.register\(\{[\s\S]*?id: pane\.id,[\s\S]*?kind: pane\.kind,/, '页签类型注册必须同时给 id 与 kind')
-  assert.match(
-    SOURCE,
-    /slots\.register\(\{ name: 'sidebar\.right\.pane\.tab', key: pane\.id \}, PANE_BODIES\[pane\.key\]\)/,
-    '正文注册的 key 必须与该页签的 id 一致',
-  )
-  assert.match(
-    SOURCE,
-    /slots\.register\(\{ name: 'sidebar\.right\.pane\.tab\.title', key: pane\.id \}, PANE_TITLES\[pane\.key\]\)/,
-    '标题注册的 key 必须与该页签的 id 一致',
-  )
+  // 右栏三处，key 必须都指向同一个 TAB_ID。
+  assert.match(SOURCE, /tabs\.register\(\{[\s\S]*?id: TAB_ID,[\s\S]*?kind: KIND,/, '页签类型注册必须同时给 id 与 kind')
+  assert.match(SOURCE, /slots\.register\(\{ name: 'sidebar\.right\.pane\.tab', key: TAB_ID \}, RadarBody\)/, '正文注册的 key 必须是 TAB_ID')
+  assert.match(SOURCE, /slots\.register\(\{ name: 'sidebar\.right\.pane\.tab\.title', key: TAB_ID \}, RadarTitle\)/, '标题注册的 key 必须是 TAB_ID')
 
-  // 类型前缀必须与 Spike 不同，否则两个插件会争同一个页签。
+  // 标识符必须与 Spike 不同，否则两个插件会争同一个页签。
   const kind = SOURCE.match(/const KIND = '([^']+)'/)?.[1]
+  const tabId = SOURCE.match(/const TAB_ID = '([^']+)'/)?.[1]
   assert.equal(kind, 'apradar')
+  assert.equal(tabId, 'dsh-apradar:main')
   assert.notEqual(kind, 'apradar-spike')
-})
-
-test('三个页签真的各自注册：id / kind 互不相同，各带一张引导卡片', () => {
-  const client = loadClient({ respond: () => ({ ok: true, data: {} }) })
-  try {
-    const mod = client.exports ?? client.exported
-    const registered = []
-    const slots = []
-    const srCtx = {
-      sidebarRightTabs: {
-        register: (definition) => {
-          registered.push(definition)
-          return () => {}
-        },
-      },
-      slots: {
-        inject: (_name, fn) => fn(),
-        register: (options, component) => {
-          slots.push({ ...options, component })
-          return () => {}
-        },
-      },
-      effect: (fn) => fn(),
-    }
-    mod.apply({
-      inject: (_names, fn) => fn(srCtx),
-      get: () => null,
-      slots: { inject: (_name, fn) => fn(), register: () => () => {} },
-    })
-
-    assert.equal(registered.length, 3, '必须注册三个右栏页签')
-    assert.deepEqual(
-      registered.map((tab) => tab.kind),
-      ['apradar:inbox', 'apradar:sources', 'apradar:opps'],
-      'kind 是 openTab 的判别符，必须是三段各自不同的类型',
-    )
-    assert.equal(new Set(registered.map((tab) => tab.id)).size, 3, 'id 必须全局唯一 —— 重复会在 register 时直接抛错')
-    for (const tab of registered) {
-      assert.equal(tab.priority, 'extension')
-      assert.equal(typeof tab.title, 'function')
-      assert.equal(tab.guide?.length, 1, '每个页签都要有一张引导卡片，否则新建页签的引导页里根本找不到它')
-      assert.match(tab.guide[0].title(), /AI 产品雷达/, '产品名必须出现在引导卡片上（chip 太窄放不下）')
-      assert.ok(tab.guide[0].description().length > 0, '引导卡片要说清这个页签是干什么的')
-    }
-
-    // 正文与标题席位：三个页签 × 两个席位，key 必须逐个对上。
-    assert.equal(slots.length, 6, '三个页签 ×（正文 + 标题）= 6 个席位')
-    const ids = registered.map((tab) => tab.id).sort()
-    for (const name of ['sidebar.right.pane.tab', 'sidebar.right.pane.tab.title']) {
-      const keys = slots.filter((slot) => slot.name === name).map((slot) => slot.key).sort()
-      assert.deepEqual(keys, ids, `${name} 的 key 必须是三个页签的 id`)
-    }
-    const bodies = slots.filter((slot) => slot.name === 'sidebar.right.pane.tab').map((slot) => slot.component)
-    assert.equal(new Set(bodies).size, 3, '三个页签的正文组件必须互不相同，否则会渲染成同一个视图')
-  } finally {
-    client.restore()
-  }
 })
 
 test('客户端不引入任何第三方依赖，也不直接访问外部网络', async () => {
@@ -135,7 +71,7 @@ test('客户端不引入任何第三方依赖，也不直接访问外部网络',
 
 // ------------------------------------------------------------------ 2. 视图骨架与接口漂移
 
-test('三个页签各自的正文都能渲染，且每个真实请求都命中真实路由（防客户端/服务端漂移）', async () => {
+test('三个视图都能渲染，且每个真实请求都命中真实路由（防客户端/服务端漂移）', async () => {
   const renderer = createRenderer()
   const requests = []
   const responder = ({ method, path }) => {
@@ -172,44 +108,39 @@ test('三个页签各自的正文都能渲染，且每个真实请求都命中�
     // 拿不到 exports 就退化为直接对源码做静态契约检查，并在下面断言失败。
     assert.ok(mod, '客户端模块必须通过 __ModuleLoader__.load 导出 exports')
 
-    const panes = mod.__test?.PANE_BODIES ?? null
-    assert.ok(panes, '客户端必须导出 __test.PANE_BODIES 供回归测试渲染（仅在测试里使用）')
+    // 真渲染：把 RadarBody 挂上去。
+    const body = mod.__test?.RadarBody ?? null
+    assert.ok(body, '客户端必须导出 __test.RadarBody 供回归测试渲染（仅在测试里使用）')
 
-    // 页签 chip 上的名字就是三个视图名 —— 名字错了，用户根本找不到那个页签。
-    assert.deepEqual(
-      Object.values(mod.__test.PANE_TITLES).map((title) => title()),
-      ['变化', '关注源', '机会池'],
-      '三个页签必须正好叫「变化 / 关注源 / 机会池」',
-    )
+    let tree = await client.renderer.render(body, {})
+    let text = client.renderer.textOf(tree)
+    // 面板正文里**不该**再重复一遍产品名：右栏的页签 chip（`RadarTitle`）已经写着它，
+    // 正文再写一遍既重复又白占一行高度。名字的存在性改由 RadarTitle 自己来证明。
+    assert.ok(!text.includes('AI 产品雷达'), '面板正文不该重复产品名 —— 名字在右栏页签上')
+    assert.ok(text.includes('变化') && text.includes('关注源') && text.includes('机会池'), '三个视图页签都必须在')
 
-    /*
-     * 每个页签是**独立挂载**的（真实右栏里也是三个各自独立的 React 根），所以每换
-     * 一个页签就重置渲染器实例 —— 否则上一个页签的 Hook 状态会顺着同一个根路径
-     * 被下一个页签继承，测出一个真实浏览器里不存在的世界。
-     */
-    const renderPane = (key) => {
-      client.renderer.reset()
-      return client.renderer.render(panes[key], {})
-    }
+    const title = await client.renderer.render(mod.__test.RadarTitle, {})
+    assert.ok(client.renderer.textOf(title).includes('AI 产品雷达'), '产品名必须在右栏页签上（否则界面上就没有名字了）')
 
-    // ① 变化
-    let tree = await renderPane('inbox')
-    const inboxText = client.renderer.textOf(tree)
-    // 面板正文里**不该**再重复一遍产品名：右栏页签 chip 与引导卡片上已经有了。
-    assert.ok(!inboxText.includes('AI 产品雷达'), '面板正文不该重复产品名 —— 名字在右栏页签上')
-    // 渲染过程中的请求：/meta 与 /state 至少各一次。
+    // 渲染过程中的请求：/meta 与 /state 至少各一次，且全部命中真实路由。
     assert.ok(client.requests.some((r) => r.path === '/apradar/meta'), '首屏必须读能力清单')
     assert.ok(client.requests.some((r) => r.path === '/apradar/state'), '首屏必须读存储状态')
-    assert.ok(client.requests.some((r) => r.path.startsWith('/apradar/changes')), '变化页签必须去取变化列表')
 
-    // ② 关注源
-    await renderPane('sources')
-    assert.ok(client.requests.some((r) => r.path === '/apradar/sources'), '关注源页签必须去取来源列表')
-    assert.ok(client.requests.some((r) => r.path === '/apradar/templates'), '关注源页签必须去取预置模板')
+    // 切到「关注源」
+    const sourcesTab = client.renderer.findClickable(tree, (node, t) => t === '关注源')
+    assert.ok(sourcesTab, '要有「关注源」页签按钮')
+    sourcesTab.props.onClick()
+    tree = await client.renderer.render(body, {})
+    text = client.renderer.textOf(tree)
+    assert.ok(client.requests.some((r) => r.path === '/apradar/sources'), '切到关注源必须去取来源列表')
+    assert.ok(client.requests.some((r) => r.path === '/apradar/templates'), '切到关注源必须去取预置模板')
 
-    // ③ 机会池
-    tree = await renderPane('opps')
-    assert.ok(client.requests.some((r) => r.path.startsWith('/apradar/opportunities')), '机会池页签必须去取机会列表')
+    // 切到「机会池」
+    const oppsTab = client.renderer.findClickable(tree, (node, t) => t === '机会池')
+    assert.ok(oppsTab, '要有「机会池」页签按钮')
+    oppsTab.props.onClick()
+    tree = await client.renderer.render(body, {})
+    assert.ok(client.requests.some((r) => r.path.startsWith('/apradar/opportunities')), '切到机会池必须去取机会列表')
 
     // ***** 防漂移：每个真实发出的请求都要能被真实路由表接住 *****
     const known = new Set(ROUTES.map((route) => `${route.method} ${route.path}`))
@@ -240,8 +171,8 @@ test('存储不可用时不显示空列表，而是显示失败原因', async ()
   const client = loadClient({ respond: responder })
   try {
     const mod = client.exports ?? client.exported
-    const body = mod.__test?.PANE_BODIES?.inbox
-    assert.ok(body, '客户端必须导出 __test.PANE_BODIES')
+    const body = mod.__test?.RadarBody
+    assert.ok(body, '客户端必须导出 __test.RadarBody')
     const tree = await client.renderer.render(body, {})
     const text = client.renderer.textOf(tree)
     assert.ok(text.includes('存储不可用'), `存储失败时必须显式说明，实际渲染出：${text.slice(0, 200)}`)
@@ -353,8 +284,8 @@ test('沉淀为产品机会必须带上 changeId：否则机会与变化两个�
   const client = loadClient({ respond: responder })
   try {
     const mod = client.exports ?? client.exported
-    const body = mod.__test?.PANE_BODIES?.inbox
-    assert.ok(body, '客户端必须导出 __test.PANE_BODIES.inbox')
+    const body = mod.__test?.RadarBody
+    assert.ok(body, '客户端必须导出 __test.RadarBody')
 
     // ① 渲染收件箱
     let tree = await client.renderer.render(body, {})

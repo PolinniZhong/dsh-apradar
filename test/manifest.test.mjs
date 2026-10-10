@@ -77,10 +77,7 @@ test('路由前缀与右栏标识不得与 Spike 相同', () => {
   assert.ok(!/ROUTE_PREFIX = '\/apradar-spike'/.test(http), '路由前缀不得与 Spike 重叠')
 
   assert.match(client, /KIND = 'apradar'/)
-  // 三个页签的 id 必须都在，且都带 `dsh-apradar:` 前缀（同一个插件的身份命名空间）。
-  for (const key of ['inbox', 'sources', 'opps']) {
-    assert.match(client, new RegExp(`id: 'dsh-apradar:${key}'`), `缺少 ${key} 页签的 id`)
-  }
+  assert.match(client, /TAB_ID = 'dsh-apradar:main'/)
   assert.ok(!/KIND = 'apradar-spike'/.test(client), '右栏 kind 不得与 Spike 重叠')
 })
 
@@ -113,12 +110,12 @@ test('回归：会话头部席位只能渲染入口按钮，绝不能渲染面�
   assert.match(code, /RadarEntryButton,\s*\),?\s*$/, '必须以 RadarEntryButton 作位置参数传入')
 })
 
-test('右栏正文与标题席位必须用该页签自己的 id 作 key', () => {
+test('右栏正文与标题席位必须用同一个 key（= TAB_ID）', () => {
   const client = readFileSync(join(ROOT, 'src/client/client.js'), 'utf8')
   for (const slot of ['sidebar.right.pane.tab', 'sidebar.right.pane.tab.title']) {
-    const re = new RegExp(`name: '${slot.replace(/\./g, '\\.')}', key: (pane\\.id)`)
+    const re = new RegExp(`name: '${slot.replace(/\./g, '\\.')}', key: (\\w+)`)
     const m = client.match(re)
     assert.ok(m, `${slot} 必须以 name+key 注册`)
-    assert.strictEqual(m[1], 'pane.id', `${slot} 的 key 必须是页签自己的 id（0.1.1 起三个页签各一个 key）`)
+    assert.strictEqual(m[1], 'TAB_ID', `${slot} 的 key 必须是 TAB_ID`)
   }
 })
