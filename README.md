@@ -17,7 +17,7 @@
 | 部分 | 状态 |
 | :--- | :--- |
 | Host 同源路由（`/apradar`） | 已实现，**22 条端点** |
-| 右栏「AI 产品雷达」页签 + 三视图 | 已实现（变化收件箱 / 关注源管理 / 产品机会池），**只在右侧边栏**渲染 |
+| 右栏三个页签 + 三视图 | 已实现：**变化** / **关注源** / **机会池** 各是一个独立的官方右栏页签（`apradar:inbox` / `apradar:sources` / `apradar:opps`），可分别开关、并排；**只在右侧边栏**渲染 |
 | 真实出网抓取 | **已实测**（`api.github.com` 与 4 个真实 Feed，见 [TECH-SPIKE.md](TECH-SPIKE.md) §6.6） |
 | 解析适配器 | **5 类**：`github_releases`（api 优先双端点，因为本机 `github.com` 不可达）/ `github_repo`（仓库定位信息，Stars 只做里程碑）/ `npm_package`（单版本清单）/ `rss_atom` / `html_static`；另有 9 条预置模板 |
 | 规范化 · 指纹去重 · 差异检测 | 已实现，**幂等**（内容没变时不产生假变化，已用真实数据验证） |
@@ -27,7 +27,7 @@
 | 四个域的声明式存储 | 已实现，跨重启持久化**已实测通过** |
 | **可发布的 npm 包形态** | 已实现：`npm run build` 组装出自洽的 `lib/` 运行树，`npm pack` 出 **34 个文件、无 `src/`、无 `demo/`、无 `test/`**；在**全新 profile** 里从 tarball 安装并启动**无需源码**，零第三方依赖 |
 | 客户端半边自诊断 | 已实现：缺失 `lib/client.js` 时平台**不会**报错（实测），本插件在启动时自己喊出来（`TECH-SPIKE.md` §6.12.4） |
-| 离线测试套件 | **335 项 `node --test` 全通过**；测试绝不真出网（内存替身） |
+| 离线测试套件 | **336 项 `node --test` 全通过**；测试绝不真出网（内存替身） |
 
 **还没做的：**
 
@@ -51,7 +51,7 @@ dsh plugin --profile <profile> add "<本仓库绝对路径>"
 ```bash
 npm run build                       # 组装 lib/ 运行树（必做，见下）
 npm pack                            # 产出 dsh-apradar-<version>.tgz
-dsh plugin --profile <profile> add ./dsh-apradar-0.1.0.tgz
+dsh plugin --profile <profile> add ./dsh-apradar-0.1.1.tgz
 ```
 
 **升级：**
@@ -63,7 +63,7 @@ npm pack
 dsh plugin --profile <profile> add ./dsh-apradar-<新版本>.tgz
 ```
 
-之后**重启 Harness**（Desktop 直接退出重开，Web 重新执行 `dsh web --profile <profile>`），右栏会出现「AI 产品雷达」页签。
+之后**重启 Harness**（Desktop 直接退出重开，Web 重新执行 `dsh web --profile <profile>`），右栏会出现三个页签：**变化**、**关注源**、**机会池**（新建页签的引导页里也是这三张卡片）。会话头部的入口按钮打开的是「变化」页签。
 
 > ⚠️ **宿主在启动时解析并缓存客户端的产物路径。** 只改客户端源码时刷新页面即可（`link:` 安装下宿主直接取源码）；但只要你动了 `package.json` 的 `exports["./client"]` 或把安装方式从 `link:` 换成 tarball，就**必须重启宿主**才生效 —— 这一点是实测出来的（`TECH-SPIKE.md` §6.12.5），不是推测。
 

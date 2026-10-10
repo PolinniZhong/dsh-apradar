@@ -21,7 +21,7 @@
 |---|---|---|---|
 | **P0-00** 技术验证 Spike | ✅ **完成** | Q1–Q4 在 Desktop 与隔离 Web Profile 双向通过；异常态五项判定全 true；卸载清理（重启后）通过 | — |
 | **P0-01** 插件骨架与清单 | ✅ **完成** | `package.json`（`dsh.bundle.patch` / `dsh.client` / `exports` / `engines.node >= 22.19`）、`cordis.patch.yml`、Host 入口（`inject(['webServer'])` + `apply` + `ctx.effect` 注销）、Client bundle（`__ModuleLoader__.load` + 仅 `require('react')`，无 JSX、无构建步骤）、`README.md`、**测试套件随 P1 增长至 323 项 `node --test` 全通过**（P0 完成时为 236 项）、装入真实 `tauri` Profile 且宿主 HMR 免重启生效 | —（`engines.dsh` 与 Client 的 npm 发布形态已由 **P1-07** 补齐：`engines.dsh >= 0.2.0-rc.1`、`npm run build` 组装 `lib/` 运行树，`npm pack` 出 33 个文件、无 `src/`） |
-| **P0-02** 唯一右栏页签 + 页内三视图外壳 | ✅ **完成** | 右栏页签（`id: dsh-apradar:main`、`kind: apradar`）与「变化 / 关注源 / 机会池」三视图；会话头部入口按钮（**只传位置参数**，见 [TECH-SPIKE.md](TECH-SPIKE.md) §6.5）；`--apr-*` 样式内联注入；**真实宿主实测：面板只在右栏（x 793..1440），主区无面板** | — |
+| **P0-02** 右栏三页签 + 三视图外壳 | ✅ **完成** | **0.1.1（2026-10-10）起为三个独立右栏页签**：「变化」（`id: dsh-apradar:inbox`、`kind: apradar:inbox`）/「关注源」（`…:sources`）/「机会池」（`…:opps`），各自注册正文与标题席位，可分别开关与并排；跨视图跳转 = 打开另一个页签并带上记录 id。0.1.0 的形态是单页签（`id: dsh-apradar:main`、`kind: apradar`）+ 页内分段控件，**真实宿主实测：面板只在右栏（x 793..1440），主区无面板**（该实测属 0.1.0） | 三页签形态**尚未在真实宿主上跑过**（只过了 336 项离线测试）；会话头部入口按钮只打开「变化」页签 |
 | **P0-03** 持久化：4 个 domain | ✅ **完成** | 4 个 domain 真实落盘（`$DSH_HOME/storages/ai_product_radar_sources.json` 等）；`openCount` 1→2→…→46 **跨进程/跨重启递增**、`firstOpenedAt` 保留；`ctx.effect` 释放里 `close()`；`ctx.get()` 读服务 + 「永不抛出」纪律；无 zod（改为零依赖的数据形状字面量 spec） | `backup-and-skip`（V2）与 `version-mismatch`（V3）只有单测覆盖，未在真实畸形文件上实测 |
 | **P0-04** 受管出网闸门 | ✅ **完成** | `src/host/fetch/gateway.js`（`resolveService()` 走 `ctx.get`、`normalizeFetchResult()`、`createFakeGateway()`）；`src/host/fetch/url.js`（协议白名单、拒凭据、拒 localhost/私有网段/IPv6 回环与 v4-mapped、`MAX_URL_LENGTH=2048`）；**G-NET-4 测试 5/5**（完整刷新只走 `ctx.web.fetch`、服务不可用时如实失败且绝不回落原生 fetch、透传取消信号、缺字段给安全默认） | 未声称「完整 SSRF 防护」—— 真正的防线在 DSH 抓取层，本插件只做字面量快速失败 |
 | **P0-05** 适配器框架 + GitHub Releases | ✅ **完成** | `defineAdapter` 校验（`buildRequest` / `buildRequests` / `parse` / `normalizeConfig`）；**双端点**：首选 `api.github.com/repos/<o>/<r>/releases?per_page=10`，备用 `github.com/<o>/<r>/releases.atom`；`resolveRequests()` 按优先级返回候选；按内容嗅探（首个非空白字符 `[`/`{` → JSON，否则 Atom）；3 条预置模板 | — |
@@ -66,16 +66,19 @@
 | **测试条件** | T1、V6；L4 → **已执行通过**（`test/manifest.test.mjs`） |
 | **依据** | [COMPATIBILITY.md](COMPATIBILITY.md) §3.1；[SDD.md](SDD.md) §10.1 |
 
-### P0-02 唯一右栏页签 + 页内三视图外壳 —— ✅ 已完成
+### P0-02 右栏三页签 + 三视图外壳 —— ✅ 已完成
+
+> **0.1.1 变更（2026-10-10）**：用户要求把三个视图放到右栏的**三个独立页签**上（原话「变化一个界面、关注人一个界面、机会池一个界面」，
+> 见 [PRD.md](PRD.md) §5.1）。0.1.0 的「单页签 + 页内分段控件」形态就此作废 —— **不是**被新条目取代，而是同一条 P0-02 的实现换了。
 
 | 项 | 内容 |
 |---|---|
-| **用户价值** | 所有操作都在一个地方完成，不需要在多个 DSH 页签之间来回找。 |
-| **交付** | `sidebarRightTabs.register({id, kind, priority:'extension', title, guide})`；`ctx.slots.register({name:'sidebar.right.pane.tab', key: id}, Body)`；页内分段控件（收件箱/关注源/机会池）+ 刷新按钮 + 刷新状态行 + 详情态返回。**不注册多个页签，不使用标题栏/工具栏席位。** |
+| **用户价值** | 三个视图可以同时并排开着：看变化详情时点「打开机会详情」，机会池是**另一个页签**，变化那一页原样留在旁边（筛选、搜索、滚动位置都不丢）。页内切换做不到这一点。 |
+| **交付** | `for (const pane of PANES)` 三次 `sidebarRightTabs.register({id: pane.id, kind: pane.kind, priority:'extension', title: PANE_TITLES[pane.key], guide:[…]})`；每次配一对 `ctx.slots.register({name:'sidebar.right.pane.tab', key: pane.id}, PANE_BODIES[pane.key])` 与 `…pane.tab.title`；三份正文共用一个 `RadarPane({paneKey, useTabInfo})`，各持一片 `slice` 状态；跨视图跳转走 `tab.actions.openTab(kind, {params:{detailId}, revealIfOpened:true})`；刷新按钮 + 刷新状态行 + 详情态返回。**不使用标题栏/工具栏席位。** |
 | **依赖** | P0-01 |
-| **验收标准** | 1) 右栏只出现一个「AI 产品雷达」页签；2) 三个视图可在页内切换；3) 详情态为内容区替换且有返回；4) 300px 窄面板下无横向溢出；5) 浅色/深色均可读。 |
-| **测试条件** | T2、T3、T4；L4。（T2 已通过；T3/T4 待三视图落地后执行） |
-| **依据** | [PRD.md](PRD.md) §5.1、§6.1；[COMPATIBILITY.md](COMPATIBILITY.md) §3.2、§4.4 N4/N5 |
+| **验收标准** | 1) 右栏出现三个页签（变化 / 关注源 / 机会池），可分别开关、可并排；2) 每个页签只承载自己那一个视图，页内**没有**分段控件；3) 详情态为内容区替换且有返回（回到**本页签**的列表）；4) 变化详情里的「打开机会详情 ›」会打开机会池页签并用真实 id 定位到那一条，且变化页签内容不被替换；5) 300px 窄面板下无横向溢出；6) 浅色/深色均可读。 |
+| **测试条件** | T2、T3、T4；L4。（`test/client.test.mjs`「三个页签真的各自注册」+「三个页签各自的正文都能渲染」已通过；`test/detail.test.mjs` ⑦ 覆盖双向跨页签跳转） |
+| **依据** | [PRD.md](PRD.md) §5.1、§6.1；[SDD.md](SDD.md) §6.4；[COMPATIBILITY.md](COMPATIBILITY.md) §3.2、§4.4 N4/N5 |
 
 ### P0-03 持久化：4 个 domain 与句柄生命周期 —— ✅ 已完成
 
@@ -463,7 +466,7 @@ P0-00 技术 Spike（V1/V6）  ← ⛔ 前置闸门：不通过不得开工任�
  └─ 不通过（Desktop 路由不可达）────► 先验 V4（typert RPC），再回到 §6.1 改方案
 
 P0-01 骨架
- ├─ P0-02 右栏单入口 ─────────────────┐   （须在 P0-00 通过之后）
+ ├─ P0-02 右栏三页签 ─────────────────┐   （须在 P0-00 通过之后）
  ├─ P0-03 持久化 ─┬─ P0-07 规范化/去重 ─ P0-08 差异 ─┬─ P0-10 收件箱 ─ P0-11 详情 ─ P0-13 机会池
  │                ├─ P0-09 路由 ──────────────────────┘        │
  │                └─ P0-15 持久化状态/purge                      │

@@ -1,6 +1,6 @@
 {
   "name": "dsh-apradar",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI 产品雷达（AI Product Radar）—— 面向 AI 产品经理与 Agent Harness 用户的 DSH 插件：关注公开来源、识别前后变化、查看原始证据、沉淀产品机会。",
   "type": "module",
   "main": "./lib/index.js",
