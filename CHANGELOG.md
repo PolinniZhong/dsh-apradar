@@ -14,7 +14,17 @@ GitHub Release 的正文取自本文件的对应小节，**不另写一份** —
 （实测「开始」引导页上并排出现 `AI 产品雷达 · 变化` / `· 关注源` / `· 机会池` 三张卡片）。
 用户确认要的是 Knit 那个形状。
 
-> **发布记录**：（发布成功后回填）
+> **发布记录**：GitHub tag `v0.1.2` → 提交 `420883ceb100b6e7c9374420ddea5a2346d3bd5d`（轻量 tag），
+> 2026-10-10 建 Release（`publishedAt 09:22:13Z`），正文即本节。
+> npm：`dsh-apradar@0.1.2` 于 2026-10-10T09:25:17Z 发布 —— `dist.shasum = efd9cb8c831f4e1da1261529784be44f8d83aa84`、
+> `dist.fileCount = 34`、`dist.unpackedSize = 485448`、`dist-tags.latest = 0.1.2`。
+> ✅ **`gitHead` = `420883c…`，等于 tag 指向的提交** —— 与 0.1.1 同样的做法：在 `git clone --no-local`
+> 出的**真实 clone**（`.git` 是目录）里 `git checkout --detach v0.1.2` 之后 publish，
+> **没有**再用 `git worktree add`（链接工作树的 `.git` 是文件，npm 读 `<gitRoot>/.git/HEAD` 抛 `ENOTDIR`
+> 被静默吞掉 —— 0.1.0 就是这么丢掉 `gitHead` 的）。该 clone 里 `npm pack --dry-run` 的 shasum 与主工作区
+> 完全一致（`efd9cb8c…`），所以从哪个树发对**包内容**没有影响，只影响 gitHead 这个指针。
+> registry 有处理延迟：裸 tarball URL 先回 404，约 100 秒后带 `?cb=` 取到 200 —— 这是**延迟 + CDN 缓存**，
+> 不是发布失败。`check-published.mjs --online` **退出码 0**（含"下载件 sha1 == dist.shasum"与"34 个文件"）。
 
 ### 变更
 
