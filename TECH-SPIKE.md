@@ -978,6 +978,16 @@ CSS 引擎、没有真实布局、没有真实滚动容器**。它能证明的�
   2. **npm 会把根级文件的权限位原样带进 tarball**：`lib/**` 由构建脚本写成 644，而 `LICENSE` / `README.md` / `cordis.patch.yml` / `package.json` 是工具创建的 **600** ⇒ 同一个提交，工作区打包与全新 clone 打包的 shasum 会**不同**。而 git **不跟踪** 600/644（只跟踪可执行位），所以 `git status` 是干净的、问题只在打包那一刻暴露。发布前把这四个文件 `chmod 644` 归一即可。
   3. **在链接工作树里发布会把 `gitHead` 整个丢掉**（不是写错提交，是根本不写）：npm 读的是 `<gitRoot>/.git/HEAD`（`@npmcli/package-json/lib/normalize.js:499`），而 `git worktree add` 造出的目录里 `.git` 是一个**文件**（内容 `gitdir: …`），读取抛 `ENOTDIR` 后被那里的空 `catch` 静默吞掉 ⇒ `gitHead` 缺失，npm 包页面上没有"构建自哪个提交"的链接。要让 `gitHead` 等于 tag 指向的提交，必须**真实 clone 到那个提交再发布**。**不能靠"撤销后重发"补救** —— npm 撤销政策原文：同一个 `name@version` 一旦撤销就**永远不能重用**（`docs.npmjs.com/policies/unpublish`）。
   4. 首次发布时 registry 会**自动**加一个 `0.0.0-stage` 占位版本（`stub: true`，描述为 "Temporary package placeholder for staged publishing"）：不是本仓库发布的产物，也不占 `dist-tags`。别把它当成"多发了一个版本"。
-- **npm 侧仍未验证/仍欠**：可信发布（**OIDC / Trusted Publisher**）未配，`--provenance` 未开；长期凭据直发在 npm 上**正在被退役** —— npm 的令牌创建页自带警告「Bypass-2fa token with direct-publish access are being deprecated … write (stage only)」。本轮的首次发布是靠一枚 Bypass-2FA 粒度令牌非交互完成的（即 Skill 里"长期 token 直发已堵死"那条**在本机并未复现**，实测拿到的是 `EOTP` 而非 `E403`，换用 bypass 令牌后成功）；下一步的正确终点是 OIDC。
+  5. **`npm publish` 现在是 `202 Accepted`，registry 侧异步落地**（npm 11.17.0，2026-10-10 实测 `dsh-apradar@0.1.1`）：CLI 打印
+     `Your package is being processed and may take a few minutes to become available.` 后**正常退出 0**，但 PUT 的响应码是
+     **202 而不是 201**（`http fetch PUT 202 https://registry.npmjs.org/dsh-apradar`）。落地顺序：**先** packument 带上新版本、
+     `dist-tags.latest` 翻过去（本次约 2 分钟后），**后** tarball 才可下 —— 在那之前 tarball URL 被 Cloudflare 边缘缓存着一个
+     `404 {"error":"Not found"}`（响应头带 `age: 186`、`cache-control: public, max-age=300`）；在缓存过期前用**带随机 query 的 URL**
+     能立刻取到真包（`200`、163133 B、`cmp` 与本地 pack 逐字节相同）。**判据是"tarball 能下"，不是"dist-tags 翻过去了"**；
+     `check-published.mjs --online` 卡在这一步时先等几分钟，**不要重跑 `npm publish`**（会得 `E409`），也不要拿刚退出 0 当已发布。
+  6. **0.1.1 实测：`gitHead` 已等于 tag 指向的提交**（`6328d78dd0e20cd618bab64b5a92a05a017f02ea`）—— 按上面第 3 条改用
+     `git clone --no-local <仓库> /tmp/apr-pub && git checkout --detach <tag>` 之后，第 3 条那个坑确认修掉（`check-published.mjs`
+     的 `gitHead == tag` 这条 `must` 通过）。
+- **npm 侧仍未验证/仍欠**：可信发布（**OIDC / Trusted Publisher**）未配，`--provenance` 未开；长期凭据直发在 npm 上**正在被退役** —— npm 的令牌创建页自带警告「Bypass-2fa token with direct-publish access are being deprecated … write (stage only)」。本轮的首次发布是靠一枚 Bypass-2FA 粒度令牌非交互完成的（即 Skill 里"长期 token 直发已堵死"那条**在本机并未复现**，实测拿到的是 `EOTP` 而非 `E403`，换用 bypass 令牌后成功）；下一步的正确终点是 OIDC。**2026-10-10 复查：`npm whoami` → `polinni`，本机登录态已恢复** —— 0.1.0 当天的 `E401` 是当时的状态，不是长期事实。另：本机 `~/.npm/_cacache` 仍被 root 拥有，`npm` 任何要写缓存的命令都要带 `--cache /tmp/apradar-npm-cache`，否则报 `EPERM`（日志都写不出来）。
 - **GitHub Release 与推送通道（2026-10-10 补）**：`v0.1.0` 已发布为 GitHub Release（轻量 tag，正文取自本文件同仓的 `CHANGELOG.md` 的 0.1.0 一节），**不带 npm 包**（npm 侧另见上一条）。推送通道上另有一条**环境事实**：本机对 `github.com:443` **直连不通**（`curl` 12 秒超时、`git push` 等了 75 秒后失败），而同一 GitHub 网段的其他主机名都通 —— `api.github.com:443`（HTTP 200 / 0.16 s）、`codeload.github.com:443`、`ssh.github.com:443`。这与 6.2.1 记的「可达性逐主机名判定」是同一个现象，只不过程度更甚：它**不只影响插件的抓取，也挡 `git push`**；而 `gh` 走的是 `api.github.com`，所以「建库成功、紧接着推送失败」并不矛盾。**推送必须显式走本机代理**（`git -c http.proxy=… -c https.proxy=…`），具体地址记在仓库外的发布档案里、不进本文件；`git` 与 `curl` **都不读 macOS 系统代理设置**，只认 `http_proxy`/`https_proxy` 环境变量 —— 这就是同一个终端里「浏览器能开 GitHub 而 `git push` 超时」的全部原因，不需要生成 SSH 密钥，也不是插件缺陷。
 - 本节所有结论的**有效性以 `COMPATIBILITY.md` §2 记录的三套版本号为准**；DSH 没有接口稳定性承诺（§8），升级后必须重跑本 Spike。

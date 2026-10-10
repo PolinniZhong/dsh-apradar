@@ -10,6 +10,16 @@ GitHub Release 的正文取自本文件的对应小节，**不另写一份** —
 把三个视图从「一个页签 + 页内分段控件」改成**三个独立的右侧栏页签**。功能一个没少，
 改的是入口的形状 —— 之前跨视图跳转会把你正在看的那一页换掉，现在不会了。
 
+> **发布记录**：GitHub tag `v0.1.1` → 提交 `6328d78dd0e20cd618bab64b5a92a05a017f02ea`（轻量 tag），
+> 2026-10-10 建 Release（`publishedAt 08:42:37Z`），正文即本节。
+> npm：`dsh-apradar@0.1.1` 于 2026-10-10T08:43:54Z 发布 —— `dist.shasum = ebc702b9e9ec8411b79d2349aa9fee5affa4da62`、
+> tarball sha256 `6c90a2f90db65a8bcf13770deb22d473ee968541ac3118e4bc06dc2bded9afd0`、
+> `dist.fileCount = 34`、`dist.unpackedSize = 490042`、`dist-tags.latest = 0.1.1`。
+> ✅ **`gitHead` = `6328d78…`，等于 tag 指向的提交** —— 0.1.0 那个「gitHead 整个键缺失」的坑已修掉：
+> 本次是在 `git clone --no-local` 出的**真实 clone**（`.git` 是目录）里、`git checkout --detach v0.1.1` 之后 publish 的，
+> 没有再用 `git worktree add`（链接工作树的 `.git` 是文件，npm 读 `<gitRoot>/.git/HEAD` 抛 `ENOTDIR` 被静默吞掉）。
+> 本地 pack 的 tarball 与 registry 下载下来的那份 `cmp` **逐字节相同**。
+
 ### 变更
 
 **入口与界面**
