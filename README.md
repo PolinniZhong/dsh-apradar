@@ -16,7 +16,7 @@
 
 | 部分 | 状态 |
 | :--- | :--- |
-| Host 同源路由（`/apradar`） | 已实现，**21 条端点** |
+| Host 同源路由（`/apradar`） | 已实现，**22 条端点** |
 | 右栏「AI 产品雷达」页签 + 三视图 | 已实现（变化收件箱 / 关注源管理 / 产品机会池），**只在右侧边栏**渲染 |
 | 真实出网抓取 | **已实测**（`api.github.com` 与 4 个真实 Feed，见 [TECH-SPIKE.md](TECH-SPIKE.md) §6.6） |
 | 解析适配器 | **5 类**：`github_releases`（api 优先双端点，因为本机 `github.com` 不可达）/ `github_repo`（仓库定位信息，Stars 只做里程碑）/ `npm_package`（单版本清单）/ `rss_atom` / `html_static`；另有 9 条预置模板 |
@@ -25,9 +25,9 @@
 | 定时刷新 | 已实现（15 分钟 – 24 小时；连续 3 次失败自动停用并说明原因），**已实测自动触发** |
 | 机会池导出 Markdown | 已实现（事实 / 推测分区 + 证据链，按不可信内容转义） |
 | 四个域的声明式存储 | 已实现，跨重启持久化**已实测通过** |
-| **可发布的 npm 包形态** | 已实现：`npm run build` 组装出自洽的 `lib/` 运行树，`npm pack` 出 **33 个文件、无 `src/`、无 `demo/`、无 `test/`**；在**全新 profile** 里从 tarball 安装并启动**无需源码**，零第三方依赖 |
+| **可发布的 npm 包形态** | 已实现：`npm run build` 组装出自洽的 `lib/` 运行树，`npm pack` 出 **34 个文件、无 `src/`、无 `demo/`、无 `test/`**；在**全新 profile** 里从 tarball 安装并启动**无需源码**，零第三方依赖 |
 | 客户端半边自诊断 | 已实现：缺失 `lib/client.js` 时平台**不会**报错（实测），本插件在启动时自己喊出来（`TECH-SPIKE.md` §6.12.4） |
-| 离线测试套件 | **323 项 `node --test` 全通过**；测试绝不真出网（内存替身） |
+| 离线测试套件 | **335 项 `node --test` 全通过**；测试绝不真出网（内存替身） |
 
 **还没做的：**
 
@@ -104,6 +104,7 @@ node --test 'test/*.test.mjs'
 - `COMPATIBILITY.md` —— 实际核验的 DSH 版本、API 依据、能力矩阵、已知风险
 - `MVP-BACKLOG.md` —— P0/P1/P2 拆分与验收标准
 - `TECH-SPIKE.md` —— 技术验证 Spike 的实测记录与证据
+- `CHANGELOG.md` —— 每个版本的发布内容（GitHub Release 正文取自这里）
 
 ## 许可证
 
